@@ -5,38 +5,58 @@ import { Observable } from 'rxjs'
   providedIn: 'root',
 })
 export class ChromeService {
-  constructor() {
-  }
+  constructor() {}
 
-  async getCurrentWindow(): Promise<chrome.windows.Window> {
+  getCurrentWindow(): Promise<chrome.windows.Window> {
     return new Promise((resolve) => {
-      chrome.windows.getCurrent(window => {
+      chrome.windows.getCurrent((window) => {
         resolve(window)
       })
     })
   }
 
-  async activateTab(tabId: number): Promise<chrome.tabs.Tab> {
-    return new Promise(resolve => {
-      chrome.tabs.update(tabId, { active: true }, tab => resolve(tab))
+  activateTab(tabId: number): Promise<chrome.tabs.Tab> {
+    return new Promise((resolve) => {
+      chrome.tabs.update(tabId, { active: true }, (tab) => resolve(tab))
     })
   }
 
-  async activateWindow(windowId: number): Promise<chrome.windows.Window> {
-    return new Promise(resolve => {
-      chrome.windows.update(windowId, {
-        focused: true,
-      }, window => resolve(window))
+  activateWindow(windowId: number): Promise<chrome.windows.Window> {
+    return new Promise((resolve) => {
+      chrome.windows.update(
+        windowId,
+        {
+          focused: true,
+        },
+        (window) => resolve(window),
+      )
     })
   }
 
-  tabsQuery(param: chrome.tabs.QueryInfo): Promise<chrome.tabs.Tab[]> {
-    return new Promise(resolve => chrome.tabs.query(param, tabs => resolve(tabs)))
+  tabsQuery(queryInfo: chrome.tabs.QueryInfo): Promise<chrome.tabs.Tab[]> {
+    return new Promise((resolve) =>
+      chrome.tabs.query(queryInfo, (tabs) => resolve(tabs)),
+    )
   }
 
-  historySearch(param: chrome.history.HistoryQuery): Promise<chrome.history.HistoryItem[]> {
-    return new Promise(resolve => chrome.history.search(param, (results: chrome.history.HistoryItem[]) => {
-      resolve(results)
-    }))
+  historySearch(
+    historyQuery: chrome.history.HistoryQuery,
+  ): Promise<chrome.history.HistoryItem[]> {
+    return new Promise((resolve) =>
+      chrome.history.search(
+        historyQuery,
+        (results: chrome.history.HistoryItem[]) => {
+          resolve(results)
+        },
+      ),
+    )
+  }
+
+  tabsCreate(
+    createProperties: chrome.tabs.CreateProperties,
+  ): Promise<chrome.tabs.Tab> {
+    return new Promise((resolve) =>
+      chrome.tabs.create(createProperties, (tab) => resolve(tab)),
+    )
   }
 }

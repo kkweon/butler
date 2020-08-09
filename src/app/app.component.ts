@@ -7,6 +7,7 @@ import { ChromeService } from './chrome.service'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import getCapturedTabs = chrome.tabCapture.getCapturedTabs
+import Fuse from 'fuse.js'
 
 interface SearchResult {
   name: string
@@ -47,26 +48,25 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.tabResults$ = this.searchInput.valueChanges.pipe(
+      map((searchInputText: string) => searchInputText.toLowerCase()),
       switchMap((searchInputText) => {
         if (!searchInputText) {
           return []
         }
         return this.chromeService.tabsQuery({}).then((tabs) => {
-          return tabs
-            .filter(
-              (tab) =>
-                tab.title?.includes(searchInputText) ||
-                tab.url?.includes(searchInputText),
-            )
-            .map((tab) => ({
-              faviconUrl: tab.favIconUrl,
-              name: tab.title,
-              url: tab.url,
-              tab,
-            }))
+          const filteredTabs = new Fuse<Tab>(tabs, {
+            keys: ['title', 'url'],
+            isCaseSensitive: false,
+          }).search(searchInputText)
+
+          return filteredTabs.map(({ item: tab }) => ({
+            faviconUrl: tab.favIconUrl,
+            name: tab.title,
+            url: tab.url,
+            tab,
+          }))
         })
       }),
-      map((results) => filterUniqueValues(results)),
     )
 
     this.historyResults$ = this.searchInput.valueChanges.pipe(
@@ -74,6 +74,7 @@ export class AppComponent implements OnInit {
         if (!searchInputText) {
           return []
         }
+
         this.isSearchingHistory = true
         return this.chromeService
           .historySearch({
@@ -90,6 +91,7 @@ export class AppComponent implements OnInit {
             }))
           })
       }),
+      // there could be many duplicate for history. Hence, remove the duplicates.
       map((results) => filterUniqueValues(results)),
       tap(() => {
         this.isSearchingHistory = false
@@ -106,23 +108,15 @@ export class AppComponent implements OnInit {
         await this.chromeService.activateWindow(result.tab.windowId)
         await this.chromeService.activateTab(result.tab.id)
       }
-      return
+    } else if (result.history) {
+      await this.chromeService.tabsCreate({ active: true, url: result.url })
+      this.searchInput.reset()
     }
-
-    if (result.history) {
-      chrome.tabs.create(
-        {
-          active: true,
-          url: result.url,
-        },
-        (tab) => {
-          this.searchInput.reset()
-        },
-      )
-    }
+    // close the popup window.
+    window.close()
   }
 
-  onSelectionChange(event: MatSelectionListChange): void {
-    this.onClickItem(event.option.value)
+  async onSelectionChange(event: MatSelectionListChange): Promise<void> {
+    await this.onClickItem(event.option.value)
   }
 }
