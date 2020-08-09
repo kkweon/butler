@@ -10,5 +10,14 @@
   "browser_action": {
     "default_title": "Butler",
     "default_popup": "index.html"
+  },
+  "icons": {
+    "16": "assets/butler_16.png",
+    "24": "assets/butler_24.png",
+    "32": "assets/butler_32.png",
+    "64": "assets/butler_64.png",
+    "128": "assets/butler_128.png",
+    "256": "assets/butler_256.png",
+    "512": "assets/butler_512.png"
   }
 }

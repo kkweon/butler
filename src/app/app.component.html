@@ -26,7 +26,10 @@
                                  alt="favicon url"> {{ searchResult.name }}</h2>
       <p matLine>{{ searchResult.url }}</p>
     </mat-list-option>
-    <div *ngIf="isSearchingHistory">Loading history (it takes some time)...</div>
+    <mat-list-option *ngIf="isSearchingHistory" color="primary">Loading history (it takes some time)...</mat-list-option>
   </mat-selection-list>
+
+  <h6 class="mat-subheading-1">Icons made by <a href="https://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from
+    <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></h6>
 </div>
 
