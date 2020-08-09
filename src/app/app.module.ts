@@ -6,12 +6,18 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { ReactiveFormsModule } from '@angular/forms'
-import { MatListModule } from '@angular/material/list';
-import { MatInputAutofocusDirective } from './mat-input-autofocus.directive'
+import { MatListModule } from '@angular/material/list'
 
 @NgModule({
-  declarations: [AppComponent, MatInputAutofocusDirective],
-  imports: [BrowserModule, BrowserAnimationsModule, MatFormFieldModule, MatInputModule, ReactiveFormsModule, MatListModule],
+  declarations: [AppComponent],
+  imports: [
+    BrowserModule,
+    BrowserAnimationsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    ReactiveFormsModule,
+    MatListModule,
+  ],
   providers: [],
   bootstrap: [AppComponent],
 })

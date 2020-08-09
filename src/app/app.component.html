@@ -1,12 +1,12 @@
 <div class="container">
   <mat-form-field appearance="fill">
     <mat-label>Search history or tab</mat-label>
-    <input matInput type="text" [formControl]="searchInput" appMatInputAutofocus>
+    <input matInput type="text" [formControl]="searchInput" autofocus>
   </mat-form-field>
 
   <mat-selection-list
     [multiple]="false"
-    *ngIf="searchInput.value.length > 0"
+    *ngIf="searchInput.value?.length > 0"
     (selectionChange)="onSelectionChange($event)">
     <mat-list-option *ngFor="let searchResult of tabResults$ | async"
                      (click)="onClickItem(searchResult)"
