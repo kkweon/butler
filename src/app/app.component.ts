@@ -139,10 +139,8 @@ export class AppComponent implements OnInit {
 
   async onClickItem(result: SearchResult | BrowserAction): Promise<void> {
     if (isBrowserAction(result)) {
-      return result.action()
-    }
-
-    if (result.tab) {
+      await result.action()
+    } else if (result.tab) {
       const currentWindow = await this.chromeService.getCurrentWindow()
       if (currentWindow.id === result.tab.windowId) {
         await this.chromeService.activateTab(result.tab.id)

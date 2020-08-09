@@ -10,13 +10,11 @@
     (selectionChange)="onSelectionChange($event)">
 
     <mat-list-option *ngFor="let browserAction of browserActions$ | async"
-                     (click)="browserAction.action"
                      [value]="browserAction">
       <h2 matLine>{{browserAction.name}}</h2>
     </mat-list-option>
 
     <mat-list-option *ngFor="let searchResult of tabResults$ | async"
-                     (click)="onClickItem(searchResult)"
                      [value]="searchResult">
       <h2 matLine>[tab] <img class="favicon"
                              *ngIf="searchResult.faviconUrl"
@@ -25,7 +23,6 @@
       <p matLine>{{ searchResult.url }}</p>
     </mat-list-option>
     <mat-list-option *ngFor="let searchResult of historyResults$ | async"
-                     (click)="onClickItem(searchResult)"
                      [value]="searchResult">
       <h2 matLine>[history] <img class="favicon"
                                  *ngIf="searchResult.faviconUrl"

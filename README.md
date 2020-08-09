@@ -1,5 +1,7 @@
 # Butler
 
+Butler is a Chrome extension that helps to search tabs, history, and browser actions (e.g., close tabs).
+
 <div>
   <img src="./readme_assets/butler_demo.gif" width="100%" align="center">
 </div>
