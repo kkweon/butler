@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "Butler",
+  "version": "0.0.1",
+  "description": "Butler is the Chrome extension to search tabs & browser histories.",
+  "permissions": [
+    "tabs",
+    "history"
+  ],
+  "browser_action": {
+    "default_title": "Butler",
+    "default_popup": "index.html"
+  }
+}
