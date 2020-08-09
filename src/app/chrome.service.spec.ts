@@ -1,16 +1,16 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing'
 
-import { ChromeService } from './chrome.service';
+import { ChromeService } from './chrome.service'
 
 describe('ChromeService', () => {
-  let service: ChromeService;
+  let service: ChromeService
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(ChromeService);
-  });
+    TestBed.configureTestingModule({})
+    service = TestBed.inject(ChromeService)
+  })
 
   it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-});
+    expect(service).toBeTruthy()
+  })
+})
