@@ -19,7 +19,7 @@ interface SearchResult {
 
 function filterUniqueValues(results: SearchResult[]): SearchResult[] {
   const set = new Set()
-  return results.filter(result => {
+  return results.filter((result) => {
     if (set.has(result.url)) {
       // contains; no need to return
       return false
@@ -43,46 +43,57 @@ export class AppComponent implements OnInit {
 
   isSearchingHistory = false
 
-  constructor(private chromeService: ChromeService) {
-  }
+  constructor(private chromeService: ChromeService) {}
 
   ngOnInit(): void {
     this.tabResults$ = this.searchInput.valueChanges.pipe(
-      switchMap(searchInputText => {
+      switchMap((searchInputText) => {
         if (!searchInputText) {
           return []
         }
-        return this.chromeService.tabsQuery({}).then(tabs => {
-          return tabs.filter(tab => tab.title?.includes(searchInputText) || tab.url?.includes(searchInputText)).map(tab => ({
-            faviconUrl: tab.favIconUrl,
-            name: tab.title,
-            url: tab.url,
-            tab,
-          }))
+        return this.chromeService.tabsQuery({}).then((tabs) => {
+          return tabs
+            .filter(
+              (tab) =>
+                tab.title?.includes(searchInputText) ||
+                tab.url?.includes(searchInputText),
+            )
+            .map((tab) => ({
+              faviconUrl: tab.favIconUrl,
+              name: tab.title,
+              url: tab.url,
+              tab,
+            }))
         })
       }),
-      map(results => filterUniqueValues(results)),
+      map((results) => filterUniqueValues(results)),
     )
 
     this.historyResults$ = this.searchInput.valueChanges.pipe(
-      switchMap(searchInputText => {
+      switchMap((searchInputText) => {
         if (!searchInputText) {
           return []
         }
         this.isSearchingHistory = true
-        return this.chromeService.historySearch({ text: searchInputText }).then(histories => {
-          return histories.map(result => ({
-            faviconUrl: '',
-            name: result.title,
-            url: result.url,
-            history: result,
-          }))
-        })
+        return this.chromeService
+          .historySearch({
+            text: searchInputText,
+            startTime: 0,
+            endTime: Date.now(),
+          })
+          .then((histories) => {
+            return histories.map((result) => ({
+              faviconUrl: '',
+              name: result.title,
+              url: result.url,
+              history: result,
+            }))
+          })
       }),
-      map(results => filterUniqueValues(results)),
+      map((results) => filterUniqueValues(results)),
       tap(() => {
         this.isSearchingHistory = false
-      })
+      }),
     )
   }
 
@@ -99,12 +110,15 @@ export class AppComponent implements OnInit {
     }
 
     if (result.history) {
-      chrome.tabs.create({
-        active: true,
-        url: result.url,
-      }, tab => {
-        this.searchInput.reset()
-      })
+      chrome.tabs.create(
+        {
+          active: true,
+          url: result.url,
+        },
+        (tab) => {
+          this.searchInput.reset()
+        },
+      )
     }
   }
 
