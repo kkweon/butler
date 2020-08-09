@@ -59,4 +59,10 @@ export class ChromeService {
       chrome.tabs.create(createProperties, (tab) => resolve(tab)),
     )
   }
+
+  async tabsRemove(tabIds: number[]): Promise<void> {
+    return new Promise((resolve) => {
+      chrome.tabs.remove(tabIds, () => resolve())
+    })
+  }
 }

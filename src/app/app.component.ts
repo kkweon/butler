@@ -1,13 +1,17 @@
-import { Component, NgZone, OnInit } from '@angular/core'
+import { Component, OnInit } from '@angular/core'
 import { FormControl } from '@angular/forms'
-import { from, Observable } from 'rxjs'
+import { Observable } from 'rxjs'
 import { map, switchMap, tap } from 'rxjs/operators'
 import { MatSelectionListChange } from '@angular/material/list'
 import { ChromeService } from './chrome.service'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
-import getCapturedTabs = chrome.tabCapture.getCapturedTabs
 import Fuse from 'fuse.js'
+
+interface BrowserAction {
+  name: string
+  action: () => Promise<void>
+}
 
 interface SearchResult {
   name: string
@@ -20,7 +24,7 @@ interface SearchResult {
 
 function filterUniqueValues(results: SearchResult[]): SearchResult[] {
   const set = new Set()
-  return results.filter((result) => {
+  return results.filter((result: SearchResult) => {
     if (set.has(result.url)) {
       // contains; no need to return
       return false
@@ -28,6 +32,12 @@ function filterUniqueValues(results: SearchResult[]): SearchResult[] {
     set.add(result.url)
     return true
   })
+}
+
+function isBrowserAction(
+  result: SearchResult | BrowserAction,
+): result is BrowserAction {
+  return (result as BrowserAction).action !== undefined
 }
 
 @Component({
@@ -43,10 +53,38 @@ export class AppComponent implements OnInit {
   historyResults$: Observable<SearchResult[]>
 
   isSearchingHistory = false
+  browserActions$: Observable<BrowserAction[]>
 
   constructor(private chromeService: ChromeService) {}
 
   ngOnInit(): void {
+    const BROWSER_ACTIONS: BrowserAction[] = [
+      {
+        name: 'Close all tabs but current',
+        action: async () => {
+          const tabs = await this.chromeService.tabsQuery({
+            currentWindow: true,
+          })
+          await this.chromeService.tabsRemove(
+            tabs.filter((tab) => !tab.active).map((tab) => tab.id),
+          )
+        },
+      },
+    ]
+
+    this.browserActions$ = this.searchInput.valueChanges.pipe(
+      map((searchInputText: string) => {
+        return new Fuse<BrowserAction>(BROWSER_ACTIONS, {
+          isCaseSensitive: false,
+          keys: ['name'],
+        })
+          .search(searchInputText)
+          .map((value) => {
+            return value.item
+          })
+      }),
+    )
+
     this.tabResults$ = this.searchInput.valueChanges.pipe(
       map((searchInputText: string) => searchInputText.toLowerCase()),
       switchMap((searchInputText) => {
@@ -99,7 +137,11 @@ export class AppComponent implements OnInit {
     )
   }
 
-  async onClickItem(result: SearchResult): Promise<void> {
+  async onClickItem(result: SearchResult | BrowserAction): Promise<void> {
+    if (isBrowserAction(result)) {
+      return result.action()
+    }
+
     if (result.tab) {
       const currentWindow = await this.chromeService.getCurrentWindow()
       if (currentWindow.id === result.tab.windowId) {
