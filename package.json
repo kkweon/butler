@@ -8,7 +8,7 @@
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
-    "format": "prettier --write \"**/*.{ts, html, js, json, yaml, scss}\"",
+    "format": "prettier --write \"**/*.{ts, html, js, json, yaml, scss}\" \"*.{json,yaml,yml,js,ts}\"",
     "zip": "rm -rf dist && yarn build --prod && cd dist/butler && zip -r -9 butler.zip ."
   },
   "private": true,
