@@ -4,12 +4,18 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "yarn build:butler && yarn build:options && yarn build:options-post",
+    "build:butler": "ng build --project=butler",
+    "build:options": "yarn build:options-src && yarn build:options-post",
+    "build:options-src": "ng build --project=options --base-href=/options/",
+    "build:options-post": "cp -r dist/options dist/butler/",
+    "build:options:prod": "yarn build:options-src --prod && yarn build:options-post",
+    "build:prod": "yarn build:butler --prod && yarn build:options:prod",
     "test": "ng test",
     "lint": "ng lint",
     "e2e": "ng e2e",
     "format": "prettier --write \"**/*.{ts, html, js, json, yaml, scss}\" \"*.{json,yaml,yml,js,ts}\"",
-    "zip": "rm -rf dist && yarn build --prod && cd dist/butler && zip -r -9 butler.zip ."
+    "zip": "rm -rf dist && yarn build:prod && cd dist/butler && zip -r -9 butler.zip ."
   },
   "private": true,
   "husky": {
