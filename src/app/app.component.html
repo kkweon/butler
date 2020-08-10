@@ -1,41 +1,59 @@
 <div class="container">
   <mat-form-field appearance="fill">
     <mat-label>Search history or tab</mat-label>
-    <input matInput type="text" [formControl]="searchInput" autofocus>
+    <input matInput type="text" [formControl]="searchInput" autofocus />
   </mat-form-field>
 
   <mat-selection-list
     [multiple]="false"
     *ngIf="searchInput.value?.length > 0"
-    (selectionChange)="onSelectionChange($event)">
-
-    <mat-list-option *ngFor="let browserAction of browserActions$ | async"
-                     [value]="browserAction">
-      <h2 matLine>{{browserAction.name}}</h2>
+    (selectionChange)="onSelectionChange($event)"
+  >
+    <mat-list-option
+      *ngFor="let browserAction of browserActions$ | async"
+      [value]="browserAction"
+    >
+      <h2 matLine class="headline">{{ browserAction.name }}</h2>
     </mat-list-option>
 
-    <mat-list-option *ngFor="let searchResult of tabResults$ | async"
-                     [value]="searchResult">
-      <h2 matLine>[tab] <img class="favicon"
-                             *ngIf="searchResult.faviconUrl"
-                             [src]="searchResult.faviconUrl"
-                             alt="favicon url"> {{ searchResult.name }}</h2>
+    <mat-list-option
+      *ngFor="let searchResult of tabResults$ | async"
+      [value]="searchResult"
+    >
+      <h2 matLine class="headline">
+        <mat-icon>tab</mat-icon>
+        {{ searchResult.name }}
+        <ng-template [ngIf]="searchResult.faviconUrl"
+          >(<img
+            class="favicon"
+            [src]="searchResult.faviconUrl"
+            alt="favicon url"
+          />)
+        </ng-template>
+      </h2>
       <p matLine>{{ searchResult.url }}</p>
     </mat-list-option>
-    <mat-list-option *ngFor="let searchResult of historyResults$ | async"
-                     [value]="searchResult">
-      <h2 matLine>[history] <img class="favicon"
-                                 *ngIf="searchResult.faviconUrl"
-                                 [src]="searchResult.faviconUrl"
-                                 alt="favicon url"> {{ searchResult.name }}</h2>
+    <mat-list-option
+      *ngFor="let searchResult of historyResults$ | async"
+      [value]="searchResult"
+    >
+      <h2 matLine class="headline">
+        <mat-icon>history</mat-icon>
+        {{ searchResult.name }}
+      </h2>
       <p matLine>{{ searchResult.url }}</p>
     </mat-list-option>
-    <mat-list-option *ngIf="isSearchingHistory" color="primary">Loading history (it takes some time)...
+    <mat-list-option *ngIf="isSearchingHistory" color="primary"
+      >Loading history (it takes some time)...
     </mat-list-option>
   </mat-selection-list>
 
-  <h6 class="mat-subheading-1">Icons made by <a href="https://www.flaticon.com/authors/freepik"
-                                                title="Freepik">Freepik</a> from
-    <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></h6>
+  <h6 class="mat-subheading-1">
+    Icons made by
+    <a href="https://www.flaticon.com/authors/freepik" title="Freepik"
+      >Freepik</a
+    >
+    from
+    <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
+  </h6>
 </div>
-

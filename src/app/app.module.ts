@@ -9,6 +9,7 @@ import { ReactiveFormsModule } from '@angular/forms'
 import { MatListModule } from '@angular/material/list'
 
 import { ChromeSharedOptionsModule } from 'chrome-shared-options'
+import { MatIconModule } from '@angular/material/icon'
 
 @NgModule({
   declarations: [AppComponent],
@@ -20,6 +21,7 @@ import { ChromeSharedOptionsModule } from 'chrome-shared-options'
     ReactiveFormsModule,
     MatListModule,
     ChromeSharedOptionsModule,
+    MatIconModule,
   ],
   providers: [],
   bootstrap: [AppComponent],
