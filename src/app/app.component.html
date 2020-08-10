@@ -23,13 +23,13 @@
       <h2 matLine class="headline">
         <mat-icon>tab</mat-icon>
         {{ searchResult.name }}
-        <ng-template [ngIf]="searchResult.faviconUrl"
+        <ng-container *ngIf="searchResult.faviconUrl"
           >(<img
             class="favicon"
             [src]="searchResult.faviconUrl"
             alt="favicon url"
           />)
-        </ng-template>
+        </ng-container>
       </h2>
       <p matLine>{{ searchResult.url }}</p>
     </mat-list-option>
