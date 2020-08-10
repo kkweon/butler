@@ -70,6 +70,8 @@ export class AppComponent implements OnInit {
         action: async () => {
           const tabs = await this.chromeService.tabsQuery({
             currentWindow: true,
+            // Respect pinned
+            pinned: false,
           })
           await this.chromeService.tabsRemove(
             tabs.filter((tab) => !tab.active).map((tab) => tab.id),
