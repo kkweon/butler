@@ -66,7 +66,7 @@ export class AppComponent implements OnInit {
 
     const BROWSER_ACTIONS: BrowserAction[] = [
       {
-        name: 'Close all tabs but current',
+        name: 'Close other tabs',
         action: async () => {
           const tabs = await this.chromeService.tabsQuery({
             currentWindow: true,
