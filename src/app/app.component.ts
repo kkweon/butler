@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core'
 import { FormControl } from '@angular/forms'
-import { Observable } from 'rxjs'
+import { Observable, iif, of } from 'rxjs'
 import { map, switchMap, tap } from 'rxjs/operators'
 import { MatSelectionListChange } from '@angular/material/list'
 import { ChromeService } from './chrome.service'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import Fuse from 'fuse.js'
+import { ChromeSharedOptionsService } from 'chrome-shared-options'
 
 interface BrowserAction {
   name: string
@@ -55,9 +56,14 @@ export class AppComponent implements OnInit {
   isSearchingHistory = false
   browserActions$: Observable<BrowserAction[]>
 
-  constructor(private chromeService: ChromeService) {}
+  constructor(
+    private chromeService: ChromeService,
+    private chromeSharedOptionsService: ChromeSharedOptionsService,
+  ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    const options = await this.chromeSharedOptionsService.getOptions()
+
     const BROWSER_ACTIONS: BrowserAction[] = [
       {
         name: 'Close all tabs but current',
@@ -68,6 +74,13 @@ export class AppComponent implements OnInit {
           await this.chromeService.tabsRemove(
             tabs.filter((tab) => !tab.active).map((tab) => tab.id),
           )
+        },
+      },
+
+      {
+        name: 'Open settings',
+        action: async () => {
+          await this.chromeService.openSettings()
         },
       },
     ]
@@ -86,9 +99,8 @@ export class AppComponent implements OnInit {
     )
 
     this.tabResults$ = this.searchInput.valueChanges.pipe(
-      map((searchInputText: string) => searchInputText.toLowerCase()),
       switchMap((searchInputText) => {
-        if (!searchInputText) {
+        if (!searchInputText || !options.includesTabs) {
           return []
         }
         return this.chromeService.tabsQuery({}).then((tabs) => {
@@ -109,7 +121,7 @@ export class AppComponent implements OnInit {
 
     this.historyResults$ = this.searchInput.valueChanges.pipe(
       switchMap((searchInputText) => {
-        if (!searchInputText) {
+        if (!searchInputText || !options.includesHistory) {
           return []
         }
 
@@ -117,8 +129,7 @@ export class AppComponent implements OnInit {
         return this.chromeService
           .historySearch({
             text: searchInputText,
-            startTime: 0,
-            endTime: Date.now(),
+            startTime: options.searchHistoryStartDateInUnixEpoch,
           })
           .then((histories) => {
             return histories.map((result) => ({

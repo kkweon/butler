@@ -8,6 +8,8 @@ import { MatInputModule } from '@angular/material/input'
 import { ReactiveFormsModule } from '@angular/forms'
 import { MatListModule } from '@angular/material/list'
 
+import { ChromeSharedOptionsModule } from 'chrome-shared-options'
+
 @NgModule({
   declarations: [AppComponent],
   imports: [
@@ -17,6 +19,7 @@ import { MatListModule } from '@angular/material/list'
     MatInputModule,
     ReactiveFormsModule,
     MatListModule,
+    ChromeSharedOptionsModule,
   ],
   providers: [],
   bootstrap: [AppComponent],

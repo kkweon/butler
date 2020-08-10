@@ -65,4 +65,10 @@ export class ChromeService {
       chrome.tabs.remove(tabIds, () => resolve())
     })
   }
+
+  async openSettings(): Promise<void> {
+    return new Promise((resolve) => {
+      chrome.runtime.openOptionsPage(resolve)
+    })
+  }
 }

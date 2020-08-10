@@ -3,7 +3,7 @@
   "name": "Butler",
   "version": "0.0.1",
   "description": "Butler is the Chrome extension to search tabs & browser histories.",
-  "permissions": ["tabs", "history"],
+  "permissions": ["tabs", "history", "storage"],
   "browser_action": {
     "default_title": "Butler",
     "default_popup": "index.html"
@@ -17,5 +17,7 @@
     "256": "assets/butler_256.png",
     "512": "assets/butler_512.png"
   },
-  "options_page": "options/index.html"
+  "options_ui": {
+    "page": "options/index.html"
+  }
 }

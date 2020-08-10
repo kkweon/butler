@@ -18,6 +18,12 @@
     },
     {
       "path": "./projects/options/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/chrome-shared-options/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/chrome-shared-options/tsconfig.spec.json"
     }
   ]
 }

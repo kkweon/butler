@@ -142,7 +142,10 @@
               "projects/options/src/favicon.ico",
               "projects/options/src/assets"
             ],
-            "styles": ["projects/options/src/styles.scss"],
+            "styles": [
+              "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
+              "projects/options/src/styles.scss"
+            ],
             "scripts": []
           },
           "configurations": {
@@ -204,7 +207,10 @@
               "projects/options/src/favicon.ico",
               "projects/options/src/assets"
             ],
-            "styles": ["projects/options/src/styles.scss"],
+            "styles": [
+              "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
+              "projects/options/src/styles.scss"
+            ],
             "scripts": []
           }
         },
@@ -229,6 +235,44 @@
             "production": {
               "devServerTarget": "options:serve:production"
             }
+          }
+        }
+      }
+    },
+    "chrome-shared-options": {
+      "projectType": "library",
+      "root": "projects/chrome-shared-options",
+      "sourceRoot": "projects/chrome-shared-options/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-ng-packagr:build",
+          "options": {
+            "tsConfig": "projects/chrome-shared-options/tsconfig.lib.json",
+            "project": "projects/chrome-shared-options/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/chrome-shared-options/tsconfig.lib.prod.json"
+            }
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "main": "projects/chrome-shared-options/src/test.ts",
+            "tsConfig": "projects/chrome-shared-options/tsconfig.spec.json",
+            "karmaConfig": "projects/chrome-shared-options/karma.conf.js"
+          }
+        },
+        "lint": {
+          "builder": "@angular-devkit/build-angular:tslint",
+          "options": {
+            "tsConfig": [
+              "projects/chrome-shared-options/tsconfig.lib.json",
+              "projects/chrome-shared-options/tsconfig.spec.json"
+            ],
+            "exclude": ["**/node_modules/**"]
           }
         }
       }
