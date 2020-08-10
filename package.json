@@ -12,6 +12,11 @@
     "zip": "rm -rf dist && yarn build --prod && cd dist/butler && zip -r -9 butler.zip ."
   },
   "private": true,
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged"
+    }
+  },
   "dependencies": {
     "@angular/animations": "~10.0.6",
     "@angular/cdk": "^10.1.2",
@@ -37,6 +42,7 @@
     "@types/jasminewd2": "~2.0.3",
     "@types/node": "^12.11.1",
     "codelyzer": "^6.0.0",
+    "husky": "^4.2.5",
     "jasmine-core": "~3.5.0",
     "jasmine-spec-reporter": "~5.0.0",
     "karma": "~5.0.0",
@@ -45,6 +51,7 @@
     "karma-jasmine": "~3.3.0",
     "karma-jasmine-html-reporter": "^1.5.0",
     "prettier": "^2.0.5",
+    "pretty-quick": "^2.0.1",
     "protractor": "~7.0.0",
     "ts-node": "~8.3.0",
     "tslint": "~6.1.0",
