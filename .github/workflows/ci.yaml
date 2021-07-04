@@ -12,5 +12,6 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: '14'
-      - run: |
-          yarn test --no-watch --no-progress --browsers=ChromeHeadlessCI
+      - run: yarn install
+      - run: yarn test --no-watch --no-progress --browsers=ChromeHeadlessCI
+      - run: yarn semantic-release
