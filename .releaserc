@@ -6,5 +6,26 @@
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     "@semantic-release/github"
+  ],
+  "verifyConditions": [
+    "semantic-release-chrome",
+    "@semantic-release/github"
+  ],
+  "prepare": [
+    {
+      "path": "semantic-release-chrome",
+      "asset": "butler.zip",
+      "distFolder": "dist/butler"
+    }
+  ],
+  "publish": [
+    {
+      "path": "semantic-release-chrome",
+      "asset": "butler.zip",
+      "extensionId": "haepoecmeobjjfeonmpphmpajaefcnfo"
+    },
+    {
+      "path": "@semantic-release/github",
+    }
   ]
 }
