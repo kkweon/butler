@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core'
-import { Observable } from 'rxjs'
 
 @Injectable({
   providedIn: 'root',
@@ -58,6 +57,12 @@ export class ChromeService {
     return new Promise((resolve) =>
       chrome.tabs.create(createProperties, (tab) => resolve(tab)),
     )
+  }
+
+  async getCurrentTab(): Promise<chrome.tabs.Tab> {
+    return new Promise((resolve) => {
+      return chrome.tabs.getCurrent(resolve)
+    })
   }
 
   async tabsRemove(tabIds: number[]): Promise<void> {

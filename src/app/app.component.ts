@@ -1,13 +1,13 @@
 import { Component, OnInit } from '@angular/core'
 import { FormControl } from '@angular/forms'
-import { Observable, iif, of } from 'rxjs'
+import { Observable } from 'rxjs'
 import { map, switchMap, tap } from 'rxjs/operators'
 import { MatSelectionListChange } from '@angular/material/list'
 import { ChromeService } from './chrome.service'
-import Tab = chrome.tabs.Tab
-import HistoryItem = chrome.history.HistoryItem
 import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from 'chrome-shared-options'
+import Tab = chrome.tabs.Tab
+import HistoryItem = chrome.history.HistoryItem
 
 interface BrowserAction {
   name: string
@@ -78,7 +78,27 @@ export class AppComponent implements OnInit {
           )
         },
       },
+      {
+        name: 'Close tabs to the right',
+        action: async () => {
+          const currentTab = await this.chromeService.getCurrentTab()
+          const tabs = await this.chromeService.tabsQuery({
+            currentWindow: true,
+            pinned: false,
+          })
 
+          const findIndex = tabs.findIndex((t) => t.id === currentTab.id)
+          if (findIndex === -1) {
+            // do nothing
+            return
+          }
+
+          const tabIds = tabs.slice(findIndex + 1).map((t) => t.id)
+          if (0 < tabIds.length) {
+            await this.chromeService.tabsRemove(tabIds)
+          }
+        },
+      },
       {
         name: 'Open settings',
         action: async () => {
