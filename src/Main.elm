@@ -4,6 +4,7 @@ import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Pages exposing (PageModel, pageModelFromPage, viewPage)
 import Routes exposing (Page(..))
 import Url
 import Url.Parser
@@ -27,15 +28,24 @@ main =
 
 type alias Model =
     { key : Nav.Key
-    , url : Url.Url
-    , property : String
-    , page : Page
+    , pageModel : PageModel
     }
+
+
+redirect : Nav.Key -> Url.Url -> Cmd Msg
+redirect key url =
+    url |> Url.toString |> Nav.pushUrl key
 
 
 init : Flag -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init () url key =
-    ( Model key url "modelInitialValue" Index, Cmd.none )
+    let
+        defaultModel =
+            { key = key
+            , pageModel = Pages.Empty
+            }
+    in
+    ( defaultModel, redirect key url )
 
 
 type Msg
@@ -57,7 +67,7 @@ update msg model =
         UrlRequested urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model, Nav.pushUrl model.key (Url.toString url) )
+                    ( model, redirect model.key url )
 
                 Browser.External href ->
                     ( model, Nav.load href )
@@ -65,15 +75,10 @@ update msg model =
         UrlChanged url ->
             let
                 page =
-                    let
-                        _ =
-                            Debug.log "urlChanged" url
-                    in
                     Url.Parser.parse Routes.pageParser url
-                        |> Maybe.withDefault Index
-                        |> Debug.log "page"
+                        |> Maybe.withDefault Routes.Index
             in
-            ( { model | page = page }
+            ( { model | pageModel = pageModelFromPage page }
             , Cmd.none
             )
 
@@ -92,18 +97,7 @@ view model =
                 [ li [] [ a [ href "/" ] [ text "Home" ] ]
                 , li [] [ a [ href "/#options" ] [ text "Options" ] ]
                 ]
-            , viewPage model.page
+            , viewPage model.pageModel
             ]
         ]
     }
-
-
-viewPage : Page -> Html Msg
-viewPage page =
-    case page of
-        Index ->
-            div []
-                [ h1 [] [ text "Index" ] ]
-
-        Options ->
-            div [] [ h1 [] [ text "Options" ] ]
