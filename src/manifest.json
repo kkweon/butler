@@ -6,7 +6,7 @@
   "permissions": ["tabs", "history", "storage"],
   "browser_action": {
     "default_title": "Butler",
-    "default_popup": "index.html"
+    "default_popup": "butler/index.html"
   },
   "icons": {
     "16": "assets/butler_16.png",
@@ -19,5 +19,6 @@
   },
   "options_ui": {
     "page": "options/index.html"
-  }
+  },
+  "content_security_policy": "script-src 'self' 'unsafe-inline'; object-src 'self';"
 }
