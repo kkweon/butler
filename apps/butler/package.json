@@ -1,0 +1,7 @@
+{
+  "name": "@butler/butler",
+  "dependencies": {
+    "@butler/options": "*",
+    "@butler/chrome-shared-options": "*"
+  }
+}

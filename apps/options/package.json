@@ -1,0 +1,9 @@
+{
+  "name": "@butler/options",
+  "scripts": {
+    "build": "ng build options --base-href=/options/"
+  },
+  "dependencies": {
+    "@butler/chrome-shared-options": "*"
+  }
+}

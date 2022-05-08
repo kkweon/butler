@@ -8,22 +8,22 @@
   "files": [],
   "references": [
     {
-      "path": "./tsconfig.app.json"
+      "path": "./apps/butler/tsconfig.app.json"
     },
     {
-      "path": "./tsconfig.spec.json"
+      "path": "./apps/butler/tsconfig.spec.json"
     },
     {
-      "path": "./projects/options/tsconfig.app.json"
+      "path": "./apps/options/tsconfig.app.json"
     },
     {
-      "path": "./projects/options/tsconfig.spec.json"
+      "path": "./apps/options/tsconfig.spec.json"
     },
     {
-      "path": "./projects/chrome-shared-options/tsconfig.lib.json"
+      "path": "./libs/chrome-shared-options/tsconfig.lib.json"
     },
     {
-      "path": "./projects/chrome-shared-options/tsconfig.spec.json"
+      "path": "./libs/chrome-shared-options/tsconfig.spec.json"
     }
   ]
 }

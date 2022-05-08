@@ -1,5 +1,5 @@
 {
-  "name": "chrome-shared-options",
+  "name": "@butler/chrome-shared-options",
   "version": "0.0.1",
   "peerDependencies": {
     "@angular/common": "*",

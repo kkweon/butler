@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
-  "newProjectRoot": "projects",
+  "newProjectRoot": "libs",
   "projects": {
     "butler": {
       "projectType": "application",
@@ -10,23 +10,27 @@
           "style": "scss"
         }
       },
-      "root": "",
-      "sourceRoot": "src",
+      "root": "apps/butler",
+      "sourceRoot": "apps/butler/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
             "outputPath": "dist/butler",
-            "index": "src/index.html",
-            "main": "src/main.ts",
-            "polyfills": "src/polyfills.ts",
-            "tsConfig": "tsconfig.app.json",
+            "index": "apps/butler/src/index.html",
+            "main": "apps/butler/src/main.ts",
+            "polyfills": "apps/butler/src/polyfills.ts",
+            "tsConfig": "apps/butler/tsconfig.app.json",
             "aot": true,
-            "assets": ["src/favicon.ico", "src/assets", "src/manifest.json"],
+            "assets": [
+              "apps/butler/src/favicon.ico",
+              "apps/butler/src/assets",
+              "apps/butler/src/manifest.json"
+            ],
             "styles": [
               "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
-              "src/styles.scss"
+              "apps/butler/src/styles.scss"
             ],
             "scripts": []
           },
@@ -34,8 +38,8 @@
             "production": {
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.prod.ts"
+                  "replace": "apps/butler/src/environments/environment.ts",
+                  "with": "apps/butler/src/environments/environment.prod.ts"
                 }
               ],
               "optimization": true,
@@ -80,14 +84,14 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "main": "src/test.ts",
-            "polyfills": "src/polyfills.ts",
-            "tsConfig": "tsconfig.spec.json",
-            "karmaConfig": "karma.conf.js",
-            "assets": ["src/favicon.ico", "src/assets"],
+            "main": "apps/butler/src/test.ts",
+            "polyfills": "apps/butler/src/polyfills.ts",
+            "tsConfig": "apps/butler/tsconfig.spec.json",
+            "karmaConfig": "apps/butler/karma.conf.js",
+            "assets": ["apps/butler/src/favicon.ico", "apps/butler/src/assets"],
             "styles": [
               "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
-              "src/styles.scss"
+              "apps/butler/src/styles.scss"
             ],
             "scripts": []
           }
@@ -96,9 +100,9 @@
           "builder": "@angular-devkit/build-angular:tslint",
           "options": {
             "tsConfig": [
-              "tsconfig.app.json",
-              "tsconfig.spec.json",
-              "e2e/tsconfig.json"
+              "apps/butler/tsconfig.app.json",
+              "apps/butler/tsconfig.spec.json",
+              "apps/butler-e2e/tsconfig.json"
             ],
             "exclude": ["**/node_modules/**"]
           }
@@ -106,7 +110,7 @@
         "e2e": {
           "builder": "@angular-devkit/build-angular:protractor",
           "options": {
-            "protractorConfig": "e2e/protractor.conf.js",
+            "protractorConfig": "apps/butler-e2e/protractor.conf.js",
             "devServerTarget": "butler:serve"
           },
           "configurations": {
@@ -124,26 +128,26 @@
           "style": "scss"
         }
       },
-      "root": "projects/options",
-      "sourceRoot": "projects/options/src",
+      "root": "apps/options",
+      "sourceRoot": "apps/options/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
             "outputPath": "dist/options",
-            "index": "projects/options/src/index.html",
-            "main": "projects/options/src/main.ts",
-            "polyfills": "projects/options/src/polyfills.ts",
-            "tsConfig": "projects/options/tsconfig.app.json",
+            "index": "apps/options/src/index.html",
+            "main": "apps/options/src/main.ts",
+            "polyfills": "apps/options/src/polyfills.ts",
+            "tsConfig": "apps/options/tsconfig.app.json",
             "aot": true,
             "assets": [
-              "projects/options/src/favicon.ico",
-              "projects/options/src/assets"
+              "apps/options/src/favicon.ico",
+              "apps/options/src/assets"
             ],
             "styles": [
               "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
-              "projects/options/src/styles.scss"
+              "apps/options/src/styles.scss"
             ],
             "scripts": []
           },
@@ -151,8 +155,8 @@
             "production": {
               "fileReplacements": [
                 {
-                  "replace": "projects/options/src/environments/environment.ts",
-                  "with": "projects/options/src/environments/environment.prod.ts"
+                  "replace": "apps/options/src/environments/environment.ts",
+                  "with": "apps/options/src/environments/environment.prod.ts"
                 }
               ],
               "optimization": true,
@@ -197,17 +201,17 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "main": "projects/options/src/test.ts",
-            "polyfills": "projects/options/src/polyfills.ts",
-            "tsConfig": "projects/options/tsconfig.spec.json",
-            "karmaConfig": "projects/options/karma.conf.js",
+            "main": "apps/options/src/test.ts",
+            "polyfills": "apps/options/src/polyfills.ts",
+            "tsConfig": "apps/options/tsconfig.spec.json",
+            "karmaConfig": "apps/options/karma.conf.js",
             "assets": [
-              "projects/options/src/favicon.ico",
-              "projects/options/src/assets"
+              "apps/options/src/favicon.ico",
+              "apps/options/src/assets"
             ],
             "styles": [
               "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
-              "projects/options/src/styles.scss"
+              "apps/options/src/styles.scss"
             ],
             "scripts": []
           }
@@ -216,9 +220,9 @@
           "builder": "@angular-devkit/build-angular:tslint",
           "options": {
             "tsConfig": [
-              "projects/options/tsconfig.app.json",
-              "projects/options/tsconfig.spec.json",
-              "projects/options/e2e/tsconfig.json"
+              "apps/options/tsconfig.app.json",
+              "apps/options/tsconfig.spec.json",
+              "apps/options/e2e/tsconfig.json"
             ],
             "exclude": ["**/node_modules/**"]
           }
@@ -226,7 +230,7 @@
         "e2e": {
           "builder": "@angular-devkit/build-angular:protractor",
           "options": {
-            "protractorConfig": "projects/options/e2e/protractor.conf.js",
+            "protractorConfig": "apps/options/e2e/protractor.conf.js",
             "devServerTarget": "options:serve"
           },
           "configurations": {
@@ -239,36 +243,36 @@
     },
     "chrome-shared-options": {
       "projectType": "library",
-      "root": "projects/chrome-shared-options",
-      "sourceRoot": "projects/chrome-shared-options/src",
+      "root": "libs/chrome-shared-options",
+      "sourceRoot": "libs/chrome-shared-options/src",
       "prefix": "lib",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-ng-packagr:build",
           "options": {
-            "tsConfig": "projects/chrome-shared-options/tsconfig.lib.json",
-            "project": "projects/chrome-shared-options/ng-package.json"
+            "tsConfig": "libs/chrome-shared-options/tsconfig.lib.json",
+            "project": "libs/chrome-shared-options/ng-package.json"
           },
           "configurations": {
             "production": {
-              "tsConfig": "projects/chrome-shared-options/tsconfig.lib.prod.json"
+              "tsConfig": "libs/chrome-shared-options/tsconfig.lib.prod.json"
             }
           }
         },
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "main": "projects/chrome-shared-options/src/test.ts",
-            "tsConfig": "projects/chrome-shared-options/tsconfig.spec.json",
-            "karmaConfig": "projects/chrome-shared-options/karma.conf.js"
+            "main": "libs/chrome-shared-options/src/test.ts",
+            "tsConfig": "libs/chrome-shared-options/tsconfig.spec.json",
+            "karmaConfig": "libs/chrome-shared-options/karma.conf.js"
           }
         },
         "lint": {
           "builder": "@angular-devkit/build-angular:tslint",
           "options": {
             "tsConfig": [
-              "projects/chrome-shared-options/tsconfig.lib.json",
-              "projects/chrome-shared-options/tsconfig.spec.json"
+              "libs/chrome-shared-options/tsconfig.lib.json",
+              "libs/chrome-shared-options/tsconfig.spec.json"
             ],
             "exclude": ["**/node_modules/**"]
           }

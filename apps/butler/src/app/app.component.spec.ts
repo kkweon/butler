@@ -3,14 +3,12 @@ import { AppComponent } from './app.component'
 import { MatFormFieldModule } from '@angular/material/form-field'
 
 describe('AppComponent', () => {
-  beforeEach(
-    waitForAsync(() => {
-      TestBed.configureTestingModule({
-        imports: [MatFormFieldModule],
-        declarations: [AppComponent],
-      }).compileComponents()
-    }),
-  )
+  beforeEach(waitForAsync(() => {
+    TestBed.configureTestingModule({
+      imports: [MatFormFieldModule],
+      declarations: [AppComponent],
+    }).compileComponents()
+  }))
 
   it('should create the app', () => {
     const fixture = TestBed.createComponent(AppComponent)
