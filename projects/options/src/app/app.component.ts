@@ -19,10 +19,22 @@ function getYYYYMMDD(unixEpoch: number | Date): string {
   return date.toISOString().split('T')[0]
 }
 
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatInputModule } from '@angular/material/input';
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatSlideToggleModule,
+    MatInputModule,
+  ],
 })
 export class AppComponent implements OnInit {
   title = 'options'

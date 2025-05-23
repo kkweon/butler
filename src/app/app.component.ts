@@ -41,10 +41,27 @@ function isBrowserAction(
   return (result as BrowserAction).action !== undefined
 }
 
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatListModule,
+    MatIconModule,
+    // ChromeSharedOptionsModule // This is likely provided elsewhere or not needed directly in template
+  ],
 })
 export class AppComponent implements OnInit {
   title = 'butler'
@@ -190,6 +207,6 @@ export class AppComponent implements OnInit {
   }
 
   async onSelectionChange(event: MatSelectionListChange): Promise<void> {
-    await this.onClickItem(event.option.value)
+    await this.onClickItem(event.options[0].value)
   }
 }
