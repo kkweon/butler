@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core'
-import { MatSlideToggleChange } from '@angular/material/slide-toggle'
+import { MatLegacySlideToggleChange as MatSlideToggleChange } from '@angular/material/legacy-slide-toggle'
 import { ChromeSharedOptionsService } from 'chrome-shared-options'
 
 function fixWrongInputDate(wrongDate: Date): Date {
