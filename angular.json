@@ -63,18 +63,18 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "butler:build"
+            "buildTarget": "butler:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "butler:build:production"
+              "buildTarget": "butler:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "butler:build"
+            "buildTarget": "butler:build"
           }
         },
         "test": {
@@ -180,18 +180,18 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "options:build"
+            "buildTarget": "options:build"
           },
           "configurations": {
             "production": {
-              "browserTarget": "options:build:production"
+              "buildTarget": "options:build:production"
             }
           }
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "browserTarget": "options:build"
+            "buildTarget": "options:build"
           }
         },
         "test": {
