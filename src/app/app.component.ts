@@ -190,6 +190,6 @@ export class AppComponent implements OnInit {
   }
 
   async onSelectionChange(event: MatSelectionListChange): Promise<void> {
-    await this.onClickItem(event.option.value)
+    await this.onClickItem(event.options[0].value)
   }
 }
