@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core'
-import { FormControl } from '@angular/forms'
+import { UntypedFormControl } from '@angular/forms'
 import { Observable } from 'rxjs'
 import { map, switchMap, tap } from 'rxjs/operators'
 import { MatSelectionListChange } from '@angular/material/list'
@@ -48,7 +48,7 @@ function isBrowserAction(
 })
 export class AppComponent implements OnInit {
   title = 'butler'
-  searchInput: FormControl = new FormControl()
+  searchInput: UntypedFormControl = new UntypedFormControl()
 
   tabResults$: Observable<SearchResult[]>
   historyResults$: Observable<SearchResult[]>
