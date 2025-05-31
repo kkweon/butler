@@ -3,10 +3,10 @@ import { NgModule } from '@angular/core'
 
 import { AppComponent } from './app.component'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
-import { MatLegacyFormFieldModule as MatFormFieldModule } from '@angular/material/legacy-form-field'
-import { MatLegacyInputModule as MatInputModule } from '@angular/material/legacy-input'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatInputModule } from '@angular/material/input'
+import { MatListModule } from '@angular/material/list'
 import { ReactiveFormsModule } from '@angular/forms'
-import { MatLegacyListModule as MatListModule } from '@angular/material/legacy-list'
 
 import { ChromeSharedOptionsModule } from 'chrome-shared-options'
 import { MatIconModule } from '@angular/material/icon'
