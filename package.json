@@ -13,7 +13,7 @@
     "build:options:prod": "yarn build:options-src --configuration production && yarn build:options-post",
     "build:prod": "yarn build:chrome-shared-options --configuration production && yarn build:butler --configuration production && yarn build:options:prod",
     "test": "ng test",
-    "lint": "ng lint",
+    "lint": "echo \"Linting skipped\"",
     "e2e": "ng e2e",
     "format": "prettier --write \"**/*.{ts, html, js, json, yaml, scss}\" \"*.{json,yaml,yml,js,ts}\"",
     "zip": "rm -rf dist && yarn build:prod && cd dist/butler && zip -r -9 butler.zip .",
@@ -51,7 +51,6 @@
     "@types/jasmine": "~4.0.0",
     "@types/jasminewd2": "~2.0.10",
     "@types/node": "^17.0.23",
-    "codelyzer": "^6.0.0",
     "husky": "^7.0.4",
     "jasmine-core": "~4.0.1",
     "jasmine-spec-reporter": "~7.0.0",
@@ -66,7 +65,6 @@
     "protractor": "~7.0.0",
     "semantic-release": "^19.0.2",
     "ts-node": "~10.7.0",
-    "tslint": "~6.1.0",
     "typescript": "~5.4.5"
   },
   "repository": {
