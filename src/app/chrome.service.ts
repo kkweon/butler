@@ -76,4 +76,68 @@ export class ChromeService {
       chrome.runtime.openOptionsPage(resolve)
     })
   }
+
+  getAllWindows(): Promise<chrome.windows.Window[]> {
+    return new Promise((resolve) => {
+      chrome.windows.getAll((windows) => resolve(windows))
+    })
+  }
+
+  tabsMove(
+    tabId: number,
+    moveProperties: chrome.tabs.MoveProperties,
+  ): Promise<chrome.tabs.Tab> {
+    return new Promise((resolve) => {
+      chrome.tabs.move(tabId, moveProperties, (tab) => resolve(tab))
+    })
+  }
+
+  async sortTabsInAllWindows(): Promise<void> {
+    try {
+      const windows = await this.getAllWindows()
+
+      for (const window of windows) {
+        try {
+          const tabs = await this.tabsQuery({ windowId: window.id })
+
+          // Separate pinned and unpinned tabs
+          const pinnedTabs = tabs.filter((tab) => tab.pinned)
+          const unpinnedTabs = tabs.filter((tab) => !tab.pinned)
+
+          // Sort each group by URL (case-insensitive)
+          // Handle tabs with no URL by placing them at the end of their group
+          pinnedTabs.sort((a, b) => {
+            const urlA = a.url || '\uFFFF' // Use high Unicode value for tabs without URL
+            const urlB = b.url || '\uFFFF'
+            return urlA.toLowerCase().localeCompare(urlB.toLowerCase())
+          })
+          unpinnedTabs.sort((a, b) => {
+            const urlA = a.url || '\uFFFF'
+            const urlB = b.url || '\uFFFF'
+            return urlA.toLowerCase().localeCompare(urlB.toLowerCase())
+          })
+
+          // Combine: pinned first, then unpinned
+          const sortedTabs = [...pinnedTabs, ...unpinnedTabs]
+
+          // Move tabs to their new positions
+          for (let i = 0; i < sortedTabs.length; i++) {
+            if (sortedTabs[i].index !== i) {
+              try {
+                await this.tabsMove(sortedTabs[i].id, { index: i })
+              } catch (error) {
+                // Skip tabs that can't be moved (e.g., if they were closed during operation)
+                console.warn('Failed to move tab:', sortedTabs[i].id, error)
+              }
+            }
+          }
+        } catch (error) {
+          // Continue with other windows if one fails
+          console.warn('Failed to sort tabs in window:', window.id, error)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to get windows for tab sorting:', error)
+    }
+  }
 }

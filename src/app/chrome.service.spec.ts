@@ -13,4 +13,18 @@ describe('ChromeService', () => {
   it('should be created', () => {
     expect(service).toBeTruthy()
   })
+
+  describe('tab sorting', () => {
+    it('should have getAllWindows method', () => {
+      expect(service.getAllWindows).toBeDefined()
+    })
+
+    it('should have tabsMove method', () => {
+      expect(service.tabsMove).toBeDefined()
+    })
+
+    it('should have sortTabsInAllWindows method', () => {
+      expect(service.sortTabsInAllWindows).toBeDefined()
+    })
+  })
 })
