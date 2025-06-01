@@ -237,11 +237,13 @@ export class AppComponent implements OnInit {
       case 'j':
       case 'ArrowDown':
         event.preventDefault()
+        event.stopPropagation()
         this.navigateList('down')
         break
       case 'k':
       case 'ArrowUp':
         event.preventDefault()
+        event.stopPropagation()
         this.navigateList('up')
         break
     }
