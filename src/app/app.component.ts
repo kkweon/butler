@@ -235,15 +235,17 @@ export class AppComponent implements OnInit {
 
     switch (event.key) {
       case 'j':
-      case 'ArrowDown':
         event.preventDefault()
+        event.stopPropagation()
         this.navigateList('down')
         break
       case 'k':
-      case 'ArrowUp':
         event.preventDefault()
+        event.stopPropagation()
         this.navigateList('up')
         break
+      // For arrow keys, let Angular Material handle them completely
+      // Don't interfere to avoid breaking selection functionality
     }
   }
 
