@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "yarn build:chrome-shared-options && yarn build:options && yarn build:options-post && yarn build:butler",
+    "build": "yarn build:chrome-shared-options && yarn build:butler && yarn build:options && yarn build:options-post",
     "build:chrome-shared-options": "ng build chrome-shared-options",
     "build:butler": "ng build butler",
     "build:options": "yarn build:options-src && yarn build:options-post",
