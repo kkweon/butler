@@ -167,7 +167,7 @@ describe('ChromeService', () => {
 
         spyOn(console, 'warn')
 
-        await expect(service.sortTabsInAllWindows()).not.toThrow()
+        await expectAsync(service.sortTabsInAllWindows()).toBeResolved()
         expect(console.warn).toHaveBeenCalled()
       })
 
@@ -189,7 +189,7 @@ describe('ChromeService', () => {
 
         spyOn(console, 'warn')
 
-        await expect(service.sortTabsInAllWindows()).not.toThrow()
+        await expectAsync(service.sortTabsInAllWindows()).toBeResolved()
         expect(console.warn).toHaveBeenCalled()
         expect(service.tabsQuery).toHaveBeenCalledTimes(2) // Called for both windows
       })
@@ -201,7 +201,7 @@ describe('ChromeService', () => {
 
         spyOn(console, 'error')
 
-        await expect(service.sortTabsInAllWindows()).not.toThrow()
+        await expectAsync(service.sortTabsInAllWindows()).toBeResolved()
         expect(console.error).toHaveBeenCalledWith(
           'Failed to get windows for tab sorting:',
           jasmine.any(Error),
