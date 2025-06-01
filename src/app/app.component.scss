@@ -7,9 +7,17 @@
   .favicon {
     height: 24px;
   }
+}
 
-  .headline {
-    display: flex;
-    align-items: center;
-  }
+mat-list-option {
+  padding: 1.5rem 0;
+}
+
+.align-center {
+  display: flex;
+  align-items: center;
+}
+
+.history-text {
+  margin-left: 8px;
 }
