@@ -15,7 +15,6 @@
     [multiple]="false"
     *ngIf="searchInput.value?.length > 0"
     (selectionChange)="onSelectionChange($event)"
-    (keydown)="onListKeyDown($event)"
   >
     <mat-list-option
       *ngFor="let browserAction of browserActions$ | async"

@@ -214,55 +214,59 @@ describe('AppComponent', () => {
       expect((component as any).navigateList).not.toHaveBeenCalled()
     })
 
-    it('should handle ArrowDown key press when focus is on list option', () => {
+    it('should not handle arrow keys in custom onKeyDown handler', () => {
       // Spy on the navigateList method
       spyOn(component as any, 'navigateList')
+
+      // Mock document.activeElement to be inside a mat-list-option
+      const mockElement = document.createElement('div')
+      const mockListOption = document.createElement('mat-list-option')
+      mockListOption.appendChild(mockElement)
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockElement,
+      )
+      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
 
       // Create a keydown event for 'ArrowDown'
       const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
       spyOn(event, 'preventDefault')
       spyOn(event, 'stopPropagation')
 
-      // Call the onListKeyDown method directly
-      component.onListKeyDown(event)
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
 
-      expect(event.preventDefault).toHaveBeenCalled()
-      expect(event.stopPropagation).toHaveBeenCalled()
-      expect((component as any).navigateList).toHaveBeenCalledWith('down')
+      // Arrow keys should be ignored by our custom handler
+      // to let Angular Material handle them natively
+      expect(event.preventDefault).not.toHaveBeenCalled()
+      expect(event.stopPropagation).not.toHaveBeenCalled()
+      expect((component as any).navigateList).not.toHaveBeenCalled()
     })
 
-    it('should handle ArrowUp key press when focus is on list option', () => {
+    it('should not handle ArrowUp in custom onKeyDown handler', () => {
       // Spy on the navigateList method
       spyOn(component as any, 'navigateList')
+
+      // Mock document.activeElement to be inside a mat-list-option
+      const mockElement = document.createElement('div')
+      const mockListOption = document.createElement('mat-list-option')
+      mockListOption.appendChild(mockElement)
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockElement,
+      )
+      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
 
       // Create a keydown event for 'ArrowUp'
       const event = new KeyboardEvent('keydown', { key: 'ArrowUp' })
       spyOn(event, 'preventDefault')
       spyOn(event, 'stopPropagation')
 
-      // Call the onListKeyDown method directly
-      component.onListKeyDown(event)
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
 
-      expect(event.preventDefault).toHaveBeenCalled()
-      expect(event.stopPropagation).toHaveBeenCalled()
-      expect((component as any).navigateList).toHaveBeenCalledWith('up')
-    })
-
-    it('should call stopPropagation for arrow keys to prevent double navigation', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
-
-      // Create a keydown event for 'ArrowDown'
-      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
-      spyOn(event, 'preventDefault')
-      spyOn(event, 'stopPropagation')
-
-      // Call the onListKeyDown method directly
-      component.onListKeyDown(event)
-
-      expect(event.preventDefault).toHaveBeenCalled()
-      expect(event.stopPropagation).toHaveBeenCalled()
-      expect((component as any).navigateList).toHaveBeenCalledWith('down')
+      // Arrow keys should be ignored by our custom handler
+      expect(event.preventDefault).not.toHaveBeenCalled()
+      expect(event.stopPropagation).not.toHaveBeenCalled()
+      expect((component as any).navigateList).not.toHaveBeenCalled()
     })
 
     it('should call stopPropagation for j/k keys', () => {
@@ -291,7 +295,7 @@ describe('AppComponent', () => {
       expect((component as any).navigateList).toHaveBeenCalledWith('down')
     })
 
-    it('should ignore non-j/k/Tab/Arrow keys', () => {
+    it('should ignore non-j/k/Tab keys', () => {
       // Spy on the navigateList method
       spyOn(component as any, 'navigateList')
 
@@ -312,23 +316,6 @@ describe('AppComponent', () => {
       component.onKeyDown(event)
 
       expect(event.preventDefault).not.toHaveBeenCalled()
-      expect((component as any).navigateList).not.toHaveBeenCalled()
-    })
-
-    it('should ignore non-arrow keys in onListKeyDown', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
-
-      // Create a keydown event for a non-arrow key
-      const event = new KeyboardEvent('keydown', { key: 'j' })
-      spyOn(event, 'preventDefault')
-      spyOn(event, 'stopPropagation')
-
-      // Call the onListKeyDown method directly
-      component.onListKeyDown(event)
-
-      expect(event.preventDefault).not.toHaveBeenCalled()
-      expect(event.stopPropagation).not.toHaveBeenCalled()
       expect((component as any).navigateList).not.toHaveBeenCalled()
     })
   })
