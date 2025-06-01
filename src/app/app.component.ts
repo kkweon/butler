@@ -120,6 +120,12 @@ export class AppComponent implements OnInit {
           await this.chromeService.openSettings()
         },
       },
+      {
+        name: 'Sort tabs by URL',
+        action: async () => {
+          await this.chromeService.sortTabsInAllWindows()
+        },
+      },
     ]
 
     this.browserActions$ = this.searchInput.valueChanges.pipe(
