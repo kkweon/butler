@@ -281,5 +281,69 @@ describe('AppComponent', () => {
       expect(event.preventDefault).not.toHaveBeenCalled()
       expect((component as any).navigateList).not.toHaveBeenCalled()
     })
+
+    it('should correctly navigate between list items without skipping', () => {
+      // Mock three options
+      const mockOptions = [
+        {
+          _hostElement: {
+            focus: jasmine.createSpy('focus1'),
+            contains: jasmine.createSpy('contains1'),
+          },
+          selected: false,
+        },
+        {
+          _hostElement: {
+            focus: jasmine.createSpy('focus2'),
+            contains: jasmine.createSpy('contains2'),
+          },
+          selected: false,
+        },
+        {
+          _hostElement: {
+            focus: jasmine.createSpy('focus3'),
+            contains: jasmine.createSpy('contains3'),
+          },
+          selected: false,
+        },
+      ]
+
+      // Mock the selection list
+      component.selectionList = {
+        options: { toArray: () => mockOptions },
+        selectedOptions: { clear: jasmine.createSpy('clear') },
+      } as any
+
+      // Mock that we're currently on the first item
+      const mockActiveElement = document.createElement('div')
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockActiveElement,
+      )
+
+      // Set up contains to return true for the first option
+      mockOptions[0]._hostElement.contains.and.returnValue(true)
+      mockOptions[1]._hostElement.contains.and.returnValue(false)
+      mockOptions[2]._hostElement.contains.and.returnValue(false)
+
+      // Call navigateList('down') - should move from index 0 to index 1
+      ;(component as any).navigateList('down')
+
+      expect(mockOptions[1]._hostElement.focus).toHaveBeenCalled()
+      expect(mockOptions[1].selected).toBe(true)
+
+      // Now simulate being on the second item and move down again
+      mockOptions[0]._hostElement.contains.and.returnValue(false)
+      mockOptions[1]._hostElement.contains.and.returnValue(true)
+      mockOptions[2]._hostElement.contains.and.returnValue(false)
+
+      // Reset the selected state
+      mockOptions[1].selected = false
+
+      // Call navigateList('down') - should move from index 1 to index 2
+      ;(component as any).navigateList('down')
+
+      expect(mockOptions[2]._hostElement.focus).toHaveBeenCalled()
+      expect(mockOptions[2].selected).toBe(true)
+    })
   })
 })

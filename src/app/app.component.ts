@@ -258,13 +258,17 @@ export class AppComponent implements OnInit {
     }
 
     const activeElement = document.activeElement
-    const currentOption = activeElement?.closest('mat-list-option')
 
     let currentIndex = -1
-    if (currentOption) {
-      currentIndex = options.findIndex(
-        (option) => option._hostElement === currentOption,
-      )
+    // Find the current index by checking which option contains the active element
+    for (let i = 0; i < options.length; i++) {
+      if (
+        options[i]._hostElement.contains(activeElement) ||
+        options[i]._hostElement === activeElement
+      ) {
+        currentIndex = i
+        break
+      }
     }
 
     let nextIndex
