@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core'
 import { CommonModule } from '@angular/common'
-import { RouterOutlet } from '@angular/router'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
 import { Observable } from 'rxjs'
 import { map, switchMap, tap } from 'rxjs/operators'
@@ -53,7 +52,6 @@ function isBrowserAction(
   standalone: true,
   imports: [
     CommonModule,
-    RouterOutlet,
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
