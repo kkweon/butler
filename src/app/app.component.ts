@@ -1,9 +1,19 @@
-import { Component, OnInit } from '@angular/core'
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  HostListener,
+  ElementRef,
+} from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
 import { Observable } from 'rxjs'
 import { map, switchMap, tap } from 'rxjs/operators'
-import { MatSelectionListChange, MatListModule } from '@angular/material/list'
+import {
+  MatSelectionList,
+  MatSelectionListChange,
+  MatListModule,
+} from '@angular/material/list'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatIconModule } from '@angular/material/icon'
@@ -62,6 +72,9 @@ function isBrowserAction(
 export class AppComponent implements OnInit {
   title = 'butler'
   searchInput: UntypedFormControl = new UntypedFormControl()
+
+  @ViewChild(MatSelectionList) selectionList: MatSelectionList
+  @ViewChild('searchInputRef') searchInputRef: ElementRef<HTMLInputElement>
 
   tabResults$: Observable<SearchResult[]>
   historyResults$: Observable<SearchResult[]>
@@ -187,6 +200,41 @@ export class AppComponent implements OnInit {
         this.isSearchingHistory = false
       }),
     )
+  }
+
+  @HostListener('keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    // Only handle j/k when results are visible
+    if (!this.searchInput.value || this.searchInput.value.length === 0) {
+      return
+    }
+
+    switch (event.key) {
+      case 'j':
+        event.preventDefault()
+        this.simulateArrowKey('ArrowDown')
+        break
+      case 'k':
+        event.preventDefault()
+        this.simulateArrowKey('ArrowUp')
+        break
+    }
+  }
+
+  private simulateArrowKey(key: string): void {
+    if (!this.selectionList) {
+      return
+    }
+
+    // Create and dispatch a keyboard event to the selection list
+    const keyboardEvent = new KeyboardEvent('keydown', {
+      key: key,
+      code: key,
+      bubbles: true,
+      cancelable: true,
+    })
+
+    this.selectionList._element.nativeElement.dispatchEvent(keyboardEvent)
   }
 
   async onClickItem(result: SearchResult | BrowserAction): Promise<void> {
