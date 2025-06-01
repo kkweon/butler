@@ -204,37 +204,81 @@ export class AppComponent implements OnInit {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    // Only handle j/k when results are visible
+    // Handle Tab key to move focus from input to first list option
+    if (
+      event.key === 'Tab' &&
+      document.activeElement === this.searchInputRef?.nativeElement &&
+      this.searchInput.value?.length > 0
+    ) {
+      const options = this.selectionList?.options.toArray()
+      if (options && options.length > 0) {
+        event.preventDefault()
+        options[0]._hostElement.focus()
+        return
+      }
+    }
+
+    // Only handle j/k when results are visible and focus is on the list options
     if (!this.searchInput.value || this.searchInput.value.length === 0) {
+      return
+    }
+
+    // Check if focus is on a mat-list-option or the selection list itself
+    const activeElement = document.activeElement
+    const isOnListOption = activeElement?.closest('mat-list-option') !== null
+    const isOnSelectionList =
+      activeElement?.closest('mat-selection-list') !== null
+
+    if (!isOnListOption && !isOnSelectionList) {
       return
     }
 
     switch (event.key) {
       case 'j':
         event.preventDefault()
-        this.simulateArrowKey('ArrowDown')
+        this.navigateList('down')
         break
       case 'k':
         event.preventDefault()
-        this.simulateArrowKey('ArrowUp')
+        this.navigateList('up')
         break
     }
   }
 
-  private simulateArrowKey(key: string): void {
+  private navigateList(direction: 'up' | 'down'): void {
     if (!this.selectionList) {
       return
     }
 
-    // Create and dispatch a keyboard event to the selection list
-    const keyboardEvent = new KeyboardEvent('keydown', {
-      key: key,
-      code: key,
-      bubbles: true,
-      cancelable: true,
-    })
+    const options = this.selectionList.options.toArray()
+    if (options.length === 0) {
+      return
+    }
 
-    this.selectionList._element.nativeElement.dispatchEvent(keyboardEvent)
+    const activeElement = document.activeElement
+    const currentOption = activeElement?.closest('mat-list-option')
+
+    let currentIndex = -1
+    if (currentOption) {
+      currentIndex = options.findIndex(
+        (option) => option._hostElement === currentOption,
+      )
+    }
+
+    let nextIndex
+    if (direction === 'down') {
+      nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0
+    } else {
+      nextIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1
+    }
+
+    // Focus and select the next option
+    const nextOption = options[nextIndex]
+    nextOption._hostElement.focus()
+
+    // Trigger selection change
+    this.selectionList.selectedOptions.clear()
+    nextOption.selected = true
   }
 
   async onClickItem(result: SearchResult | BrowserAction): Promise<void> {

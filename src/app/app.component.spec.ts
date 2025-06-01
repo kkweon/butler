@@ -90,13 +90,49 @@ describe('AppComponent', () => {
   })
 
   describe('Keyboard Navigation', () => {
-    it('should handle j key press and simulate ArrowDown', () => {
+    beforeEach(() => {
       // Set up search input with a value to enable keyboard handling
       component.searchInput.setValue('test')
       fixture.detectChanges()
+    })
 
-      // Spy on the simulateArrowKey method
-      spyOn(component as any, 'simulateArrowKey')
+    it('should handle Tab key to move focus from input to first list option', () => {
+      // Mock the selection list with options
+      const mockOption = {
+        _hostElement: { focus: jasmine.createSpy('focus') },
+      }
+      component.selectionList = {
+        options: { toArray: () => [mockOption] },
+      } as any
+
+      // Mock document.activeElement to be the search input
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        component.searchInputRef.nativeElement,
+      )
+
+      // Create a keydown event for Tab
+      const event = new KeyboardEvent('keydown', { key: 'Tab' })
+      spyOn(event, 'preventDefault')
+
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
+
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect(mockOption._hostElement.focus).toHaveBeenCalled()
+    })
+
+    it('should handle j key press when focus is on list option', () => {
+      // Spy on the navigateList method
+      spyOn(component as any, 'navigateList')
+
+      // Mock document.activeElement to be inside a mat-list-option
+      const mockElement = document.createElement('div')
+      const mockListOption = document.createElement('mat-list-option')
+      mockListOption.appendChild(mockElement)
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockElement,
+      )
+      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
 
       // Create a keydown event for 'j'
       const event = new KeyboardEvent('keydown', { key: 'j' })
@@ -106,18 +142,21 @@ describe('AppComponent', () => {
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
-      expect((component as any).simulateArrowKey).toHaveBeenCalledWith(
-        'ArrowDown',
-      )
+      expect((component as any).navigateList).toHaveBeenCalledWith('down')
     })
 
-    it('should handle k key press and simulate ArrowUp', () => {
-      // Set up search input with a value to enable keyboard handling
-      component.searchInput.setValue('test')
-      fixture.detectChanges()
+    it('should handle k key press when focus is on list option', () => {
+      // Spy on the navigateList method
+      spyOn(component as any, 'navigateList')
 
-      // Spy on the simulateArrowKey method
-      spyOn(component as any, 'simulateArrowKey')
+      // Mock document.activeElement to be inside a mat-list-option
+      const mockElement = document.createElement('div')
+      const mockListOption = document.createElement('mat-list-option')
+      mockListOption.appendChild(mockElement)
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockElement,
+      )
+      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
 
       // Create a keydown event for 'k'
       const event = new KeyboardEvent('keydown', { key: 'k' })
@@ -127,9 +166,7 @@ describe('AppComponent', () => {
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
-      expect((component as any).simulateArrowKey).toHaveBeenCalledWith(
-        'ArrowUp',
-      )
+      expect((component as any).navigateList).toHaveBeenCalledWith('up')
     })
 
     it('should not handle j/k keys when search input is empty', () => {
@@ -137,8 +174,8 @@ describe('AppComponent', () => {
       component.searchInput.setValue('')
       fixture.detectChanges()
 
-      // Spy on the simulateArrowKey method
-      spyOn(component as any, 'simulateArrowKey')
+      // Spy on the navigateList method
+      spyOn(component as any, 'navigateList')
 
       // Create a keydown event for 'j'
       const jEvent = new KeyboardEvent('keydown', { key: 'j' })
@@ -148,16 +185,43 @@ describe('AppComponent', () => {
       component.onKeyDown(jEvent)
 
       expect(jEvent.preventDefault).not.toHaveBeenCalled()
-      expect((component as any).simulateArrowKey).not.toHaveBeenCalled()
+      expect((component as any).navigateList).not.toHaveBeenCalled()
     })
 
-    it('should ignore non-j/k keys', () => {
-      // Set up search input with a value to enable keyboard handling
-      component.searchInput.setValue('test')
-      fixture.detectChanges()
+    it('should not handle j/k keys when focus is not on list option', () => {
+      // Spy on the navigateList method
+      spyOn(component as any, 'navigateList')
 
-      // Spy on the simulateArrowKey method
-      spyOn(component as any, 'simulateArrowKey')
+      // Mock document.activeElement to be outside of list options
+      const mockElement = document.createElement('input')
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockElement,
+      )
+      spyOn(mockElement, 'closest').and.returnValue(null)
+
+      // Create a keydown event for 'j'
+      const jEvent = new KeyboardEvent('keydown', { key: 'j' })
+      spyOn(jEvent, 'preventDefault')
+
+      // Call the onKeyDown method directly
+      component.onKeyDown(jEvent)
+
+      expect(jEvent.preventDefault).not.toHaveBeenCalled()
+      expect((component as any).navigateList).not.toHaveBeenCalled()
+    })
+
+    it('should ignore non-j/k/Tab keys', () => {
+      // Spy on the navigateList method
+      spyOn(component as any, 'navigateList')
+
+      // Mock document.activeElement to be inside a mat-list-option
+      const mockElement = document.createElement('div')
+      const mockListOption = document.createElement('mat-list-option')
+      mockListOption.appendChild(mockElement)
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockElement,
+      )
+      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
 
       // Create a keydown event for a different key
       const event = new KeyboardEvent('keydown', { key: 'a' })
@@ -167,7 +231,7 @@ describe('AppComponent', () => {
       component.onKeyDown(event)
 
       expect(event.preventDefault).not.toHaveBeenCalled()
-      expect((component as any).simulateArrowKey).not.toHaveBeenCalled()
+      expect((component as any).navigateList).not.toHaveBeenCalled()
     })
   })
 })
