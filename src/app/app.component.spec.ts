@@ -7,7 +7,7 @@ import { MatListModule } from '@angular/material/list'
 import { MatIconModule } from '@angular/material/icon'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { ChromeService } from './chrome.service'
-import { ChromeSharedOptionsService } from 'chrome-shared-options'
+import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 
 describe('AppComponent', () => {
   let component: AppComponent
