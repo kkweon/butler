@@ -235,12 +235,26 @@ export class AppComponent implements OnInit {
 
     switch (event.key) {
       case 'j':
-      case 'ArrowDown':
         event.preventDefault()
         event.stopPropagation()
         this.navigateList('down')
         break
       case 'k':
+        event.preventDefault()
+        event.stopPropagation()
+        this.navigateList('up')
+        break
+    }
+  }
+
+  onListKeyDown(event: KeyboardEvent): void {
+    // Handle arrow keys on the mat-selection-list to prevent double navigation
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault()
+        event.stopPropagation()
+        this.navigateList('down')
+        break
       case 'ArrowUp':
         event.preventDefault()
         event.stopPropagation()
