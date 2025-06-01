@@ -12,8 +12,9 @@ import { ChromeSharedOptionsModule } from 'chrome-shared-options'
 import { MatIconModule } from '@angular/material/icon'
 
 @NgModule({
-  declarations: [AppComponent],
+  declarations: [],
   imports: [
+    AppComponent,
     BrowserModule,
     BrowserAnimationsModule,
     MatFormFieldModule,

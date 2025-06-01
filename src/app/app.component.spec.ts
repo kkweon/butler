@@ -1,12 +1,25 @@
 import { TestBed, waitForAsync } from '@angular/core/testing'
 import { AppComponent } from './app.component'
-import { MatLegacyFormFieldModule as MatFormFieldModule } from '@angular/material/legacy-form-field'
+import { ReactiveFormsModule } from '@angular/forms'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatInputModule } from '@angular/material/input'
+import { MatListModule } from '@angular/material/list'
+import { MatIconModule } from '@angular/material/icon'
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 
 describe('AppComponent', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
-      imports: [MatFormFieldModule],
-      declarations: [AppComponent],
+      imports: [
+        AppComponent, // Import the standalone component
+        ReactiveFormsModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatListModule,
+        MatIconModule,
+        BrowserAnimationsModule, // Often needed for Material components in tests
+      ],
+      // No declarations for standalone components
     }).compileComponents()
   }))
 

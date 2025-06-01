@@ -8,8 +8,9 @@ import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 
 @NgModule({
-  declarations: [AppComponent],
+  declarations: [],
   imports: [
+    AppComponent,
     BrowserModule,
     BrowserAnimationsModule,
     MatSlideToggleModule,
