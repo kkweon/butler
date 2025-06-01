@@ -1,9 +1,19 @@
-import { Component, OnInit } from '@angular/core'
+import {
+  Component,
+  OnInit,
+  ViewChild,
+  HostListener,
+  ElementRef,
+} from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
 import { Observable } from 'rxjs'
 import { map, switchMap, tap } from 'rxjs/operators'
-import { MatSelectionListChange, MatListModule } from '@angular/material/list'
+import {
+  MatSelectionList,
+  MatSelectionListChange,
+  MatListModule,
+} from '@angular/material/list'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatIconModule } from '@angular/material/icon'
@@ -62,6 +72,9 @@ function isBrowserAction(
 export class AppComponent implements OnInit {
   title = 'butler'
   searchInput: UntypedFormControl = new UntypedFormControl()
+
+  @ViewChild(MatSelectionList) selectionList: MatSelectionList
+  @ViewChild('searchInputRef') searchInputRef: ElementRef<HTMLInputElement>
 
   tabResults$: Observable<SearchResult[]>
   historyResults$: Observable<SearchResult[]>
@@ -187,6 +200,87 @@ export class AppComponent implements OnInit {
         this.isSearchingHistory = false
       }),
     )
+  }
+
+  @HostListener('keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    // Handle Tab key to move focus from input to first list option
+    if (
+      event.key === 'Tab' &&
+      document.activeElement === this.searchInputRef?.nativeElement &&
+      this.searchInput.value?.length > 0
+    ) {
+      const options = this.selectionList?.options.toArray()
+      if (options && options.length > 0) {
+        event.preventDefault()
+        options[0]._hostElement.focus()
+        return
+      }
+    }
+
+    // Only handle j/k when results are visible and focus is on the list options
+    if (!this.searchInput.value || this.searchInput.value.length === 0) {
+      return
+    }
+
+    // Check if focus is on a mat-list-option or the selection list itself
+    const activeElement = document.activeElement
+    const isOnListOption = activeElement?.closest('mat-list-option') !== null
+    const isOnSelectionList =
+      activeElement?.closest('mat-selection-list') !== null
+
+    if (!isOnListOption && !isOnSelectionList) {
+      return
+    }
+
+    switch (event.key) {
+      case 'j':
+      case 'ArrowDown':
+        event.preventDefault()
+        this.navigateList('down')
+        break
+      case 'k':
+      case 'ArrowUp':
+        event.preventDefault()
+        this.navigateList('up')
+        break
+    }
+  }
+
+  private navigateList(direction: 'up' | 'down'): void {
+    if (!this.selectionList) {
+      return
+    }
+
+    const options = this.selectionList.options.toArray()
+    if (options.length === 0) {
+      return
+    }
+
+    const activeElement = document.activeElement
+    const currentOption = activeElement?.closest('mat-list-option')
+
+    let currentIndex = -1
+    if (currentOption) {
+      currentIndex = options.findIndex(
+        (option) => option._hostElement === currentOption,
+      )
+    }
+
+    let nextIndex
+    if (direction === 'down') {
+      nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0
+    } else {
+      nextIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1
+    }
+
+    // Focus and select the next option
+    const nextOption = options[nextIndex]
+    nextOption._hostElement.focus()
+
+    // Trigger selection change
+    this.selectionList.selectedOptions.clear()
+    nextOption.selected = true
   }
 
   async onClickItem(result: SearchResult | BrowserAction): Promise<void> {
