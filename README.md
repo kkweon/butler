@@ -1,6 +1,6 @@
 # Butler
 
-Butler is a Chrome extension that provides a unified search interface for managing browser tabs, browsing history, and executing browser actions. Built with Angular 18 and Material Design, it helps power users efficiently navigate and organize their browsing sessions.
+Butler is a Chrome extension that provides a unified search interface for managing browser tabs, browsing history, and executing browser actions. Built with Angular 20 and Material Design, it helps power users efficiently navigate and organize their browsing sessions.
 
 <div>
   <img src="./readme_assets/butler_demo.gif" width="100%" align="center">
@@ -40,7 +40,7 @@ Install Butler directly from the [Chrome Web Store](https://chrome.google.com/we
 
 ## Development
 
-This project uses Angular 18 with a multi-project workspace structure.
+This project uses Angular 20 with a multi-project workspace structure.
 
 ### Prerequisites
 
