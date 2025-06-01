@@ -1,8 +1,13 @@
 import { Component, OnInit } from '@angular/core'
-import { UntypedFormControl } from '@angular/forms'
+import { CommonModule } from '@angular/common'
+import { RouterOutlet } from '@angular/router'
+import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
 import { Observable } from 'rxjs'
 import { map, switchMap, tap } from 'rxjs/operators'
-import { MatSelectionListChange } from '@angular/material/list'
+import { MatSelectionListChange, MatListModule } from '@angular/material/list'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatInputModule } from '@angular/material/input'
+import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from 'chrome-shared-options'
@@ -45,6 +50,16 @@ function isBrowserAction(
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
+  standalone: true,
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatListModule,
+    MatIconModule,
+  ],
 })
 export class AppComponent implements OnInit {
   title = 'butler'

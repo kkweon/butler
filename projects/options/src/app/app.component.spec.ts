@@ -1,13 +1,23 @@
 import { TestBed, waitForAsync } from '@angular/core/testing'
 import { AppComponent } from './app.component'
-import { MatLegacyFormFieldModule as MatFormFieldModule } from '@angular/material/legacy-form-field'
-import { MatLegacySlideToggleModule as MatSlideToggleModule } from '@angular/material/legacy-slide-toggle'
+import { CommonModule } from '@angular/common'
+import { MatSlideToggleModule } from '@angular/material/slide-toggle'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatInputModule } from '@angular/material/input'
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations' // Or NoopAnimationsModule
 
 describe('AppComponent', () => {
   beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
-      imports: [MatFormFieldModule, MatSlideToggleModule],
-      declarations: [AppComponent],
+      imports: [
+        AppComponent, // Import the standalone component
+        CommonModule,
+        MatSlideToggleModule,
+        MatFormFieldModule,
+        MatInputModule,
+        BrowserAnimationsModule, // Or NoopAnimationsModule for tests
+      ],
+      // No declarations for standalone components
     }).compileComponents()
   }))
 
