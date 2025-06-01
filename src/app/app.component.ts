@@ -19,7 +19,7 @@ import { MatInputModule } from '@angular/material/input'
 import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
-import { ChromeSharedOptionsService } from 'chrome-shared-options'
+import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 
