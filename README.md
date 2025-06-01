@@ -97,6 +97,7 @@ Butler requires the following permissions:
 - `tabs`: Access and manage browser tabs
 - `history`: Search browsing history
 - `storage`: Save user preferences
+- `windows`: Access and manage browser windows
 
 ## Contributing
 
@@ -111,7 +112,7 @@ Butler requires the following permissions:
 
 ### Development Notes
 
-- The extension uses Chrome Extension Manifest V2
+- The extension uses Chrome Extension Manifest V3
 - Fuzzy search is implemented using Fuse.js
 - UI components use Angular Material
 - State management uses RxJS observables
