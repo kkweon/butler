@@ -40,7 +40,7 @@ Install Butler directly from the [Chrome Web Store](https://chrome.google.com/we
 
 ## Development
 
-This project uses Angular 20 with a multi-project workspace structure.
+This project uses Angular 20 with a single project structure.
 
 ### Prerequisites
 
@@ -51,10 +51,14 @@ This project uses Angular 20 with a multi-project workspace structure.
 
 ```
 butler/
-├── src/                          # Main extension (butler project)
-├── projects/
-│   ├── options/                  # Extension options/settings page
-│   └── chrome-shared-options/    # Shared Chrome storage utilities
+├── src/                          # Main extension with popup and options views
+│   ├── app/
+│   │   ├── app.component.*       # Main popup interface
+│   │   ├── options.component.*   # Settings/options interface
+│   │   ├── container.component.ts # Routing container
+│   │   └── chrome-shared-options.service.ts # Chrome storage utilities
+│   ├── options.html             # Options page entry point
+│   └── manifest.json            # Chrome extension manifest
 ```
 
 ### Development Commands
@@ -84,11 +88,13 @@ yarn zip
 
 ### Architecture
 
-- **Main Extension** (`src/`): Angular application with search interface and Chrome API integration
-- **Options Page** (`projects/options/`): Settings interface for configuring search preferences
-- **Shared Library** (`projects/chrome-shared-options/`): Common utilities for Chrome storage management
-- **Build System**: Multi-project Angular workspace with custom build pipeline
+- **Main Extension** (`src/`): Single Angular application with both popup and options views using query parameter routing
+- **Popup View** (default): Search interface for tabs, history, and browser actions
+- **Options View** (`?view=options`): Settings interface for configuring search preferences
+- **Build System**: Single Angular project with simplified build pipeline
 - **CI/CD**: Automated testing and Chrome Web Store publishing via semantic-release
+
+The application uses query parameter routing to switch between popup and options views within a single Angular application, eliminating the complexity of multiple projects while maintaining clear separation of concerns.
 
 ### Chrome Permissions
 
