@@ -235,10 +235,12 @@ export class AppComponent implements OnInit {
 
     switch (event.key) {
       case 'j':
+      case 'ArrowDown':
         event.preventDefault()
         this.navigateList('down')
         break
       case 'k':
+      case 'ArrowUp':
         event.preventDefault()
         this.navigateList('up')
         break

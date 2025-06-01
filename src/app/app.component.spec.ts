@@ -210,7 +210,55 @@ describe('AppComponent', () => {
       expect((component as any).navigateList).not.toHaveBeenCalled()
     })
 
-    it('should ignore non-j/k/Tab keys', () => {
+    it('should handle ArrowDown key press when focus is on list option', () => {
+      // Spy on the navigateList method
+      spyOn(component as any, 'navigateList')
+
+      // Mock document.activeElement to be inside a mat-list-option
+      const mockElement = document.createElement('div')
+      const mockListOption = document.createElement('mat-list-option')
+      mockListOption.appendChild(mockElement)
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockElement,
+      )
+      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
+
+      // Create a keydown event for 'ArrowDown'
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
+      spyOn(event, 'preventDefault')
+
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
+
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect((component as any).navigateList).toHaveBeenCalledWith('down')
+    })
+
+    it('should handle ArrowUp key press when focus is on list option', () => {
+      // Spy on the navigateList method
+      spyOn(component as any, 'navigateList')
+
+      // Mock document.activeElement to be inside a mat-list-option
+      const mockElement = document.createElement('div')
+      const mockListOption = document.createElement('mat-list-option')
+      mockListOption.appendChild(mockElement)
+      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
+        mockElement,
+      )
+      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
+
+      // Create a keydown event for 'ArrowUp'
+      const event = new KeyboardEvent('keydown', { key: 'ArrowUp' })
+      spyOn(event, 'preventDefault')
+
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
+
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect((component as any).navigateList).toHaveBeenCalledWith('up')
+    })
+
+    it('should ignore non-j/k/Tab/Arrow keys', () => {
       // Spy on the navigateList method
       spyOn(component as any, 'navigateList')
 
