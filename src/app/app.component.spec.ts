@@ -130,7 +130,7 @@ describe('AppComponent', () => {
       expect((component as any).navigateResults).toHaveBeenCalledWith('up')
     })
 
-    it('should handle Tab key to navigate results', () => {
+    it('should handle Tab key to navigate results down', () => {
       // Spy on the navigateResults method
       spyOn(component as any, 'navigateResults')
 
@@ -143,6 +143,21 @@ describe('AppComponent', () => {
 
       expect(event.preventDefault).toHaveBeenCalled()
       expect((component as any).navigateResults).toHaveBeenCalledWith('down')
+    })
+
+    it('should handle Shift+Tab key to navigate results up', () => {
+      // Spy on the navigateResults method
+      spyOn(component as any, 'navigateResults')
+
+      // Create a keydown event for Shift+Tab
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true })
+      spyOn(event, 'preventDefault')
+
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
+
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect((component as any).navigateResults).toHaveBeenCalledWith('up')
     })
 
     it('should handle Enter key to select current result', () => {
@@ -198,9 +213,32 @@ describe('AppComponent', () => {
       expect((component as any).navigateResults).not.toHaveBeenCalled()
     })
 
-    it('should correctly navigate down through results', () => {
+    it('should correctly navigate down through results', async () => {
+      // Set up mock data for testing navigation
+      const mockActions = [
+        { name: 'Action 1', action: async () => {} },
+        { name: 'Action 2', action: async () => {} },
+      ]
+      const mockTabs = [
+        {
+          name: 'Tab 1',
+          url: 'http://example.com',
+          faviconUrl: '',
+          tab: {} as any,
+        },
+      ]
+      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+
+      // Initialize the component and set up test data
+      await component.ngOnInit()
+      component.searchInput.setValue('test')
+
+      // Manually set the allResults$ to emit test data
+      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
+        mockResults,
+      )
+
       component.selectedIndex = 0
-      // totalResults is now a getter that calculates from arrays
 
       // Call navigateResults directly
       ;(component as any).navigateResults('down')
@@ -208,19 +246,65 @@ describe('AppComponent', () => {
       expect(component.selectedIndex).toBe(1)
     })
 
-    it('should wrap around when navigating down from last result', () => {
-      component.selectedIndex = 2
-      // totalResults should be 3 based on our mocked arrays
+    it('should wrap around when navigating down from last result', async () => {
+      // Set up mock data for testing navigation
+      const mockActions = [
+        { name: 'Action 1', action: async () => {} },
+        { name: 'Action 2', action: async () => {} },
+      ]
+      const mockTabs = [
+        {
+          name: 'Tab 1',
+          url: 'http://example.com',
+          faviconUrl: '',
+          tab: {} as any,
+        },
+      ]
+      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+
+      // Initialize the component and set up test data
+      await component.ngOnInit()
+      component.searchInput.setValue('test')
+
+      // Manually set the allResults$ to emit test data
+      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
+        mockResults,
+      )
+
+      component.selectedIndex = 2 // Last result (total is 3)
 
       // Call navigateResults directly
       ;(component as any).navigateResults('down')
 
-      expect(component.selectedIndex).toBe(0)
+      expect(component.selectedIndex).toBe(0) // Should wrap to first
     })
 
-    it('should correctly navigate up through results', () => {
+    it('should correctly navigate up through results', async () => {
+      // Set up mock data for testing navigation
+      const mockActions = [
+        { name: 'Action 1', action: async () => {} },
+        { name: 'Action 2', action: async () => {} },
+      ]
+      const mockTabs = [
+        {
+          name: 'Tab 1',
+          url: 'http://example.com',
+          faviconUrl: '',
+          tab: {} as any,
+        },
+      ]
+      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+
+      // Initialize the component and set up test data
+      await component.ngOnInit()
+      component.searchInput.setValue('test')
+
+      // Manually set the allResults$ to emit test data
+      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
+        mockResults,
+      )
+
       component.selectedIndex = 1
-      // totalResults should be 3 based on our mocked arrays
 
       // Call navigateResults directly
       ;(component as any).navigateResults('up')
@@ -228,14 +312,37 @@ describe('AppComponent', () => {
       expect(component.selectedIndex).toBe(0)
     })
 
-    it('should wrap around when navigating up from first result', () => {
+    it('should wrap around when navigating up from first result', async () => {
+      // Set up mock data for testing navigation
+      const mockActions = [
+        { name: 'Action 1', action: async () => {} },
+        { name: 'Action 2', action: async () => {} },
+      ]
+      const mockTabs = [
+        {
+          name: 'Tab 1',
+          url: 'http://example.com',
+          faviconUrl: '',
+          tab: {} as any,
+        },
+      ]
+      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+
+      // Initialize the component and set up test data
+      await component.ngOnInit()
+      component.searchInput.setValue('test')
+
+      // Manually set the allResults$ to emit test data
+      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
+        mockResults,
+      )
+
       component.selectedIndex = 0
-      // totalResults should be 3 based on our mocked arrays
 
       // Call navigateResults directly
       ;(component as any).navigateResults('up')
 
-      expect(component.selectedIndex).toBe(2)
+      expect(component.selectedIndex).toBe(2) // Should wrap to last (index 2)
     })
   })
 })

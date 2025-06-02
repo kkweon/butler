@@ -44,6 +44,9 @@
   overflow-y: auto;
   padding: var(--space-sm) 0;
   animation: fadeIn 0.2s ease-out;
+
+  /* Add padding-right to accommodate transform animations */
+  padding-right: var(--space-sm);
 }
 
 @keyframes fadeIn {

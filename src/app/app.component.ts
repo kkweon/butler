@@ -7,8 +7,8 @@ import {
 } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
-import { Observable, combineLatest } from 'rxjs'
-import { map, switchMap, tap, startWith } from 'rxjs/operators'
+import { Observable, combineLatest, BehaviorSubject } from 'rxjs'
+import { map, switchMap, tap, startWith, shareReplay } from 'rxjs/operators'
 import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
@@ -28,6 +28,12 @@ interface SearchResult {
 
   tab?: Tab
   history?: HistoryItem
+}
+
+interface CombinedResults {
+  actions: BrowserAction[]
+  tabs: SearchResult[]
+  history: SearchResult[]
 }
 
 function filterUniqueValues(results: SearchResult[]): SearchResult[] {
@@ -61,33 +67,33 @@ export class AppComponent implements OnInit {
 
   @ViewChild('searchInputRef') searchInputRef: ElementRef<HTMLInputElement>
 
+  // Combined results observable
+  allResults$: Observable<CombinedResults>
+
+  // Individual observables derived from combined results
   tabResults$: Observable<SearchResult[]>
   historyResults$: Observable<SearchResult[]>
   browserActions$: Observable<BrowserAction[]>
 
-  isSearchingHistory = false
-  selectedIndex = 0
+  // Computed observables
+  totalResults$: Observable<number>
+  hasAnyResults$: Observable<boolean>
 
-  // Track current results for keyboard navigation
-  private currentActions: BrowserAction[] = []
-  private currentTabs: SearchResult[] = []
-  private currentHistory: SearchResult[] = []
+  isSearchingHistory = false
+  private selectedIndexSubject = new BehaviorSubject<number>(0)
+  selectedIndex$ = this.selectedIndexSubject.asObservable()
 
   constructor(
     private chromeService: ChromeService,
     private chromeSharedOptionsService: ChromeSharedOptionsService,
   ) {}
 
-  get totalResults(): number {
-    return (
-      this.currentActions.length +
-      this.currentTabs.length +
-      this.currentHistory.length
-    )
+  get selectedIndex(): number {
+    return this.selectedIndexSubject.value
   }
 
-  get hasAnyResults(): boolean {
-    return this.totalResults > 0
+  set selectedIndex(value: number) {
+    this.selectedIndexSubject.next(value)
   }
 
   async ngOnInit(): Promise<void> {
@@ -142,7 +148,8 @@ export class AppComponent implements OnInit {
       },
     ]
 
-    this.browserActions$ = this.searchInput.valueChanges.pipe(
+    // Create individual observables for each result type
+    const actions$ = this.searchInput.valueChanges.pipe(
       startWith(''),
       map((searchInputText: string) => {
         if (!searchInputText) {
@@ -153,17 +160,11 @@ export class AppComponent implements OnInit {
           keys: ['name'],
         })
           .search(searchInputText)
-          .map((value) => {
-            return value.item
-          })
-      }),
-      tap((actions) => {
-        this.currentActions = actions
-        this.updateSelection()
+          .map((value) => value.item)
       }),
     )
 
-    this.tabResults$ = this.searchInput.valueChanges.pipe(
+    const tabs$ = this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap((searchInputText) => {
         if (!searchInputText || !options.includesTabs) {
@@ -183,13 +184,9 @@ export class AppComponent implements OnInit {
           }))
         })
       }),
-      tap((tabs) => {
-        this.currentTabs = tabs
-        this.updateSelection()
-      }),
     )
 
-    this.historyResults$ = this.searchInput.valueChanges.pipe(
+    const history$ = this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap((searchInputText) => {
         if (!searchInputText || !options.includesHistory) {
@@ -216,39 +213,62 @@ export class AppComponent implements OnInit {
       tap(() => {
         this.isSearchingHistory = false
       }),
-      tap((history) => {
-        this.currentHistory = history
-        this.updateSelection()
-      }),
     )
+
+    // Combine all results into a single observable
+    this.allResults$ = combineLatest([actions$, tabs$, history$]).pipe(
+      map(([actions, tabs, history]) => ({ actions, tabs, history })),
+      tap(() => {
+        // Reset selection when results change
+        this.selectedIndex = 0
+      }),
+      shareReplay(1),
+    )
+
+    // Create individual observables for template use
+    this.browserActions$ = this.allResults$.pipe(
+      map((results) => results.actions),
+    )
+    this.tabResults$ = this.allResults$.pipe(map((results) => results.tabs))
+    this.historyResults$ = this.allResults$.pipe(
+      map((results) => results.history),
+    )
+
+    // Initialize computed observables
+    this.totalResults$ = this.allResults$.pipe(
+      map(
+        (results) =>
+          results.actions.length + results.tabs.length + results.history.length,
+      ),
+    )
+
+    this.hasAnyResults$ = this.totalResults$.pipe(map((total) => total > 0))
   }
 
-  // Helper method to reset selection when results change
-  private updateSelection(): void {
-    // Reset to first item when results change
-    this.selectedIndex = 0
-  }
-
-  // Index calculation for result selection
+  // Index calculation for result selection (now using observables)
   getActionIndex(actionIndex: number): number {
     return actionIndex
   }
 
-  getTabIndex(tabIndex: number): number {
-    return this.currentActions.length + tabIndex
+  getTabIndex(tabIndex: number, allResults: CombinedResults): number {
+    return allResults.actions.length + tabIndex
   }
 
-  getHistoryIndex(historyIndex: number): number {
-    return this.currentActions.length + this.currentTabs.length + historyIndex
+  getHistoryIndex(historyIndex: number, allResults: CombinedResults): number {
+    return allResults.actions.length + allResults.tabs.length + historyIndex
   }
 
-  getActiveDescendantId(): string | null {
-    if (this.totalResults === 0) {
+  getActiveDescendantId(allResults: CombinedResults): string | null {
+    const totalResults =
+      allResults.actions.length +
+      allResults.tabs.length +
+      allResults.history.length
+    if (totalResults === 0) {
       return null
     }
 
-    const actionsCount = this.currentActions.length
-    const tabsCount = this.currentTabs.length
+    const actionsCount = allResults.actions.length
+    const tabsCount = allResults.tabs.length
 
     if (this.selectedIndex < actionsCount) {
       return `action-${this.selectedIndex}`
@@ -267,9 +287,16 @@ export class AppComponent implements OnInit {
 
     switch (event.key) {
       case 'ArrowDown':
-      case 'Tab':
         event.preventDefault()
         this.navigateResults('down')
+        break
+      case 'Tab':
+        event.preventDefault()
+        if (event.shiftKey) {
+          this.navigateResults('up')
+        } else {
+          this.navigateResults('down')
+        }
         break
       case 'ArrowUp':
         event.preventDefault()
@@ -288,45 +315,68 @@ export class AppComponent implements OnInit {
   }
 
   private navigateResults(direction: 'up' | 'down'): void {
-    if (this.totalResults === 0) {
+    if (!this.allResults$) {
       return
     }
 
-    if (direction === 'down') {
-      this.selectedIndex = (this.selectedIndex + 1) % this.totalResults
-    } else {
-      this.selectedIndex =
-        this.selectedIndex === 0
-          ? this.totalResults - 1
-          : this.selectedIndex - 1
-    }
+    // Get current results to calculate total
+    this.allResults$
+      .pipe(
+        map(
+          (results) =>
+            results.actions.length +
+            results.tabs.length +
+            results.history.length,
+        ),
+      )
+      .subscribe((totalResults) => {
+        if (totalResults === 0) {
+          return
+        }
+
+        if (direction === 'down') {
+          this.selectedIndex = (this.selectedIndex + 1) % totalResults
+        } else {
+          this.selectedIndex =
+            this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1
+        }
+      })
+      .unsubscribe()
   }
 
   private selectCurrentResult(): void {
-    const actionsCount = this.currentActions.length
-    const tabsCount = this.currentTabs.length
-
-    if (this.selectedIndex < actionsCount) {
-      // Select from actions
-      const action = this.currentActions[this.selectedIndex]
-      if (action) {
-        this.onClickItem(action)
-      }
-    } else if (this.selectedIndex < actionsCount + tabsCount) {
-      // Select from tabs
-      const tabIndex = this.selectedIndex - actionsCount
-      const tab = this.currentTabs[tabIndex]
-      if (tab) {
-        this.onClickItem(tab)
-      }
-    } else {
-      // Select from history
-      const historyIndex = this.selectedIndex - actionsCount - tabsCount
-      const history = this.currentHistory[historyIndex]
-      if (history) {
-        this.onClickItem(history)
-      }
+    if (!this.allResults$) {
+      return
     }
+
+    this.allResults$
+      .subscribe((results) => {
+        const actionsCount = results.actions.length
+        const tabsCount = results.tabs.length
+
+        if (this.selectedIndex < actionsCount) {
+          // Select from actions
+          const action = results.actions[this.selectedIndex]
+          if (action) {
+            this.onClickItem(action)
+          }
+        } else if (this.selectedIndex < actionsCount + tabsCount) {
+          // Select from tabs
+          const tabIndex = this.selectedIndex - actionsCount
+          const tab = results.tabs[tabIndex]
+          if (tab) {
+            this.onClickItem(tab)
+          }
+        } else {
+          // Select from history
+          const historyIndex = this.selectedIndex - actionsCount - tabsCount
+          const history = results.history[historyIndex]
+          if (history) {
+            this.onClickItem(history)
+          }
+        }
+      })
+      .unsubscribe()
   }
 
   async onClickItem(result: SearchResult | BrowserAction): Promise<void> {
