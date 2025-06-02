@@ -85,7 +85,7 @@ describe('AppComponent', () => {
     expect(component).toBeTruthy()
   })
 
-  it(`should have as title 'butler'`, () => {
+  it("should have as title 'butler'", () => {
     expect(component.title).toEqual('butler')
   })
 
