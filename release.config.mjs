@@ -14,9 +14,6 @@ export default {
         extensionId: 'haepoecmeobjjfeonmpphmpajaefcnfo',
       },
     ],
-    '@semantic-release/github',
-  ],
-  publish: [
     [
       '@semantic-release/github',
       {
