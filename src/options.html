@@ -14,12 +14,11 @@
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet"
     />
-    <script>
-      // Redirect to main app with options view
-      window.location.href = 'index.html?view=options'
-    </script>
   </head>
   <body class="mat-typography">
     <app-container></app-container>
+    <script src="runtime.js" type="module"></script>
+    <script src="polyfills.js" type="module"></script>
+    <script src="main.js" type="module"></script>
   </body>
 </html>

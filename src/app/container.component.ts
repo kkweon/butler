@@ -21,8 +21,12 @@ export class ContainerComponent implements OnInit {
   constructor(private route: ActivatedRoute) {}
 
   ngOnInit(): void {
+    // Check if we're on the options page by URL or query parameter
+    const currentUrl = window.location.href
+    const isOptionsPage = currentUrl.includes('options.html')
+
     this.route.queryParams.subscribe((params) => {
-      this.isOptionsView = params['view'] === 'options'
+      this.isOptionsView = isOptionsPage || params['view'] === 'options'
     })
   }
 }
