@@ -1,71 +1,160 @@
-<div class="container">
-  <mat-form-field appearance="fill">
-    <mat-label>Search history or tab</mat-label>
+<div class="command-palette" role="dialog" aria-label="Command palette search">
+  <div class="search-container">
     <input
-      matInput
+      class="search-input"
       type="text"
+      placeholder="Search anything..."
       [formControl]="searchInput"
       autofocus
       #searchInputRef
+      role="combobox"
+      aria-expanded="true"
+      aria-autocomplete="list"
+      [attr.aria-activedescendant]="
+        (allResults$ | async)
+          ? getActiveDescendantId(allResults$ | async)
+          : null
+      "
+      aria-label="Search tabs, history, and actions"
     />
-  </mat-form-field>
+  </div>
 
-  <mat-selection-list
-    #selectionListRef
-    [multiple]="false"
+  <div
+    class="results-container"
     *ngIf="searchInput.value?.length > 0"
-    (selectionChange)="onSelectionChange($event)"
+    role="listbox"
+    aria-label="Search results"
   >
-    <mat-list-option
-      *ngFor="let browserAction of browserActions$ | async"
-      [value]="browserAction"
-    >
-      <span matLine class="headline">{{ browserAction.name }}</span>
-    </mat-list-option>
+    <ng-container *ngIf="allResults$ | async as results">
+      <!-- Browser Actions Group -->
+      <div
+        class="result-group"
+        *ngIf="results.actions.length > 0"
+        role="group"
+        aria-label="Actions"
+      >
+        <div class="result-group-header">
+          <mat-icon aria-hidden="true">settings</mat-icon>
+          ACTIONS ({{ results.actions.length }})
+        </div>
+        <button
+          class="result-item"
+          *ngFor="let browserAction of results.actions; let i = index"
+          [class.selected]="selectedIndex === getActionIndex(i)"
+          [id]="'action-' + i"
+          (click)="onClickItem(browserAction)"
+          (keydown.enter)="onClickItem(browserAction)"
+          role="option"
+          [attr.aria-selected]="selectedIndex === getActionIndex(i)"
+        >
+          <div class="result-icon">
+            <mat-icon aria-hidden="true">bolt</mat-icon>
+          </div>
+          <div class="result-content">
+            <div class="result-title">{{ browserAction.name }}</div>
+          </div>
+        </button>
+      </div>
 
-    <mat-list-option
-      *ngFor="let searchResult of tabResults$ | async"
-      [value]="searchResult"
-    >
-      <span matLine class="mat-title">
-        <mat-icon>tab</mat-icon>
-        {{ searchResult.name }}
-        <ng-container *ngIf="searchResult.faviconUrl"
-          >(<img
-            class="favicon"
-            [src]="searchResult.faviconUrl"
-            alt="favicon url"
-          />)
-        </ng-container>
-      </span>
-      <span matLine class="mat-caption">{{ searchResult.url }}</span>
-    </mat-list-option>
-    <mat-list-option
-      *ngFor="let searchResult of historyResults$ | async"
-      [value]="searchResult"
-    >
-      <span matLine class="mat-title align-center">
-        <mat-icon>history</mat-icon>
-        <span class="history-text">{{ searchResult.name }}</span>
-      </span>
-      <span matLine class="mat-caption">{{ searchResult.url }}</span>
-    </mat-list-option>
-    <mat-list-option *ngIf="isSearchingHistory" color="primary"
-      >Loading history (it takes some time)...
-    </mat-list-option>
-  </mat-selection-list>
+      <!-- Tabs Group -->
+      <div
+        class="result-group"
+        *ngIf="results.tabs.length > 0"
+        role="group"
+        aria-label="Open tabs"
+      >
+        <div class="result-group-header">
+          <mat-icon aria-hidden="true">tab</mat-icon>
+          TABS ({{ results.tabs.length }})
+        </div>
+        <button
+          class="result-item"
+          *ngFor="let searchResult of results.tabs; let i = index"
+          [class.selected]="selectedIndex === getTabIndex(i, results)"
+          [id]="'tab-' + i"
+          (click)="onClickItem(searchResult)"
+          (keydown.enter)="onClickItem(searchResult)"
+          role="option"
+          [attr.aria-selected]="selectedIndex === getTabIndex(i, results)"
+        >
+          <div class="result-icon">
+            <img
+              *ngIf="searchResult.faviconUrl; else defaultTabIcon"
+              class="favicon"
+              [src]="searchResult.faviconUrl"
+              [alt]="'Favicon for ' + searchResult.name"
+            />
+            <ng-template #defaultTabIcon>
+              <mat-icon aria-hidden="true">tab</mat-icon>
+            </ng-template>
+          </div>
+          <div class="result-content">
+            <div class="result-title">{{ searchResult.name }}</div>
+            <div class="result-subtitle">{{ searchResult.url }}</div>
+          </div>
+        </button>
+      </div>
 
-  <h6 class="mat-subheading-1">
+      <!-- History Group -->
+      <div
+        class="result-group"
+        *ngIf="results.history.length > 0"
+        role="group"
+        aria-label="Browser history"
+      >
+        <div class="result-group-header">
+          <mat-icon aria-hidden="true">history</mat-icon>
+          HISTORY ({{ results.history.length }})
+        </div>
+        <button
+          class="result-item"
+          *ngFor="let searchResult of results.history; let i = index"
+          [class.selected]="selectedIndex === getHistoryIndex(i, results)"
+          [id]="'history-' + i"
+          (click)="onClickItem(searchResult)"
+          (keydown.enter)="onClickItem(searchResult)"
+          role="option"
+          [attr.aria-selected]="selectedIndex === getHistoryIndex(i, results)"
+        >
+          <div class="result-icon">
+            <mat-icon aria-hidden="true">history</mat-icon>
+          </div>
+          <div class="result-content">
+            <div class="result-title">{{ searchResult.name }}</div>
+            <div class="result-subtitle">{{ searchResult.url }}</div>
+          </div>
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- Loading State -->
+    <div
+      class="loading-state"
+      *ngIf="isSearchingHistory"
+      role="status"
+      aria-live="polite"
+    >
+      <mat-icon aria-hidden="true">refresh</mat-icon>
+      Loading history...
+    </div>
+
+    <!-- Empty State -->
+    <div
+      class="empty-state"
+      *ngIf="(hasAnyResults$ | async) === false && !isSearchingHistory"
+      role="status"
+      aria-live="polite"
+    >
+      No results found for "{{ searchInput.value }}"
+    </div>
+  </div>
+
+  <div class="attribution">
     Icons made by
-    <a
-      href="https://www.flaticon.com/authors/freepik"
-      title="Freepik"
-      [tabIndex]="-1"
+    <a href="https://www.flaticon.com/authors/freepik" title="Freepik"
       >Freepik</a
     >
     from
-    <a href="https://www.flaticon.com/" title="Flaticon" [tabIndex]="-1"
-      >www.flaticon.com</a
-    >
-  </h6>
+    <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
+  </div>
 </div>

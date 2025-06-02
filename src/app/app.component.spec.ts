@@ -1,9 +1,6 @@
 import { TestBed, waitForAsync, ComponentFixture } from '@angular/core/testing'
 import { AppComponent } from './app.component'
 import { ReactiveFormsModule } from '@angular/forms'
-import { MatFormFieldModule } from '@angular/material/form-field'
-import { MatInputModule } from '@angular/material/input'
-import { MatListModule } from '@angular/material/list'
 import { MatIconModule } from '@angular/material/icon'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { ChromeService } from './chrome.service'
@@ -51,9 +48,6 @@ describe('AppComponent', () => {
       imports: [
         AppComponent, // Import the standalone component
         ReactiveFormsModule,
-        MatFormFieldModule,
-        MatInputModule,
-        MatListModule,
         MatIconModule,
         BrowserAnimationsModule, // Often needed for Material components in tests
       ],
@@ -93,22 +87,52 @@ describe('AppComponent', () => {
     beforeEach(() => {
       // Set up search input with a value to enable keyboard handling
       component.searchInput.setValue('test')
+      // Mock some results by setting private arrays
+      ;(component as any).currentActions = [
+        { name: 'action1', action: () => {} },
+      ]
+      ;(component as any).currentTabs = [
+        { name: 'tab1', url: 'url1', faviconUrl: '' },
+      ]
+      ;(component as any).currentHistory = [
+        { name: 'history1', url: 'url2', faviconUrl: '' },
+      ]
       fixture.detectChanges()
     })
 
-    it('should handle Tab key to move focus from input to first list option', () => {
-      // Mock the selection list with options
-      const mockOption = {
-        _hostElement: { focus: jasmine.createSpy('focus') },
-      }
-      component.selectionList = {
-        options: { toArray: () => [mockOption] },
-      } as any
+    it('should handle ArrowDown key to navigate results', () => {
+      // Spy on the navigateResults method
+      spyOn(component as any, 'navigateResults')
 
-      // Mock document.activeElement to be the search input
-      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
-        component.searchInputRef.nativeElement,
-      )
+      // Create a keydown event for ArrowDown
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
+      spyOn(event, 'preventDefault')
+
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
+
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect((component as any).navigateResults).toHaveBeenCalledWith('down')
+    })
+
+    it('should handle ArrowUp key to navigate results', () => {
+      // Spy on the navigateResults method
+      spyOn(component as any, 'navigateResults')
+
+      // Create a keydown event for ArrowUp
+      const event = new KeyboardEvent('keydown', { key: 'ArrowUp' })
+      spyOn(event, 'preventDefault')
+
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
+
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect((component as any).navigateResults).toHaveBeenCalledWith('up')
+    })
+
+    it('should handle Tab key to navigate results down', () => {
+      // Spy on the navigateResults method
+      spyOn(component as any, 'navigateResults')
 
       // Create a keydown event for Tab
       const event = new KeyboardEvent('keydown', { key: 'Tab' })
@@ -118,205 +142,207 @@ describe('AppComponent', () => {
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
-      expect(mockOption._hostElement.focus).toHaveBeenCalled()
+      expect((component as any).navigateResults).toHaveBeenCalledWith('down')
     })
 
-    it('should handle j key press when focus is on list option', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
+    it('should handle Shift+Tab key to navigate results up', () => {
+      // Spy on the navigateResults method
+      spyOn(component as any, 'navigateResults')
 
-      // Mock document.activeElement to be inside a mat-list-option
-      const mockElement = document.createElement('div')
-      const mockListOption = document.createElement('mat-list-option')
-      mockListOption.appendChild(mockElement)
-      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
-        mockElement,
-      )
-      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
-
-      // Create a keydown event for 'j'
-      const event = new KeyboardEvent('keydown', { key: 'j' })
+      // Create a keydown event for Shift+Tab
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true })
       spyOn(event, 'preventDefault')
-      spyOn(event, 'stopPropagation')
 
       // Call the onKeyDown method directly
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
-      expect(event.stopPropagation).toHaveBeenCalled()
-      expect((component as any).navigateList).toHaveBeenCalledWith('down')
+      expect((component as any).navigateResults).toHaveBeenCalledWith('up')
     })
 
-    it('should handle k key press when focus is on list option', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
+    it('should handle Enter key to select current result', () => {
+      // Spy on the selectCurrentResult method
+      spyOn(component as any, 'selectCurrentResult')
 
-      // Mock document.activeElement to be inside a mat-list-option
-      const mockElement = document.createElement('div')
-      const mockListOption = document.createElement('mat-list-option')
-      mockListOption.appendChild(mockElement)
-      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
-        mockElement,
-      )
-      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
-
-      // Create a keydown event for 'k'
-      const event = new KeyboardEvent('keydown', { key: 'k' })
+      // Create a keydown event for Enter
+      const event = new KeyboardEvent('keydown', { key: 'Enter' })
       spyOn(event, 'preventDefault')
-      spyOn(event, 'stopPropagation')
 
       // Call the onKeyDown method directly
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
-      expect(event.stopPropagation).toHaveBeenCalled()
-      expect((component as any).navigateList).toHaveBeenCalledWith('up')
+      expect((component as any).selectCurrentResult).toHaveBeenCalled()
     })
 
-    it('should not handle j/k keys when search input is empty', () => {
+    it('should handle Escape key to clear search', () => {
+      // Mock the searchInputRef
+      component.searchInputRef = {
+        nativeElement: { focus: jasmine.createSpy('focus') },
+      } as any
+
+      // Create a keydown event for Escape
+      const event = new KeyboardEvent('keydown', { key: 'Escape' })
+      spyOn(event, 'preventDefault')
+      spyOn(component.searchInput, 'reset')
+
+      // Call the onKeyDown method directly
+      component.onKeyDown(event)
+
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect(component.searchInput.reset).toHaveBeenCalled()
+      expect(component.searchInputRef.nativeElement.focus).toHaveBeenCalled()
+    })
+
+    it('should not handle keys when search input is empty', () => {
       // Ensure search input is empty
       component.searchInput.setValue('')
-      fixture.detectChanges()
 
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
+      // Spy on navigation methods
+      spyOn(component as any, 'navigateResults')
+      spyOn(component as any, 'selectCurrentResult')
 
-      // Create a keydown event for 'j'
-      const jEvent = new KeyboardEvent('keydown', { key: 'j' })
-      spyOn(jEvent, 'preventDefault')
-
-      // Call the onKeyDown method directly
-      component.onKeyDown(jEvent)
-
-      expect(jEvent.preventDefault).not.toHaveBeenCalled()
-      expect((component as any).navigateList).not.toHaveBeenCalled()
-    })
-
-    it('should not handle j/k keys when focus is not on list option', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
-
-      // Mock document.activeElement to be outside of list options
-      const mockElement = document.createElement('input')
-      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
-        mockElement,
-      )
-      spyOn(mockElement, 'closest').and.returnValue(null)
-
-      // Create a keydown event for 'j'
-      const jEvent = new KeyboardEvent('keydown', { key: 'j' })
-      spyOn(jEvent, 'preventDefault')
-
-      // Call the onKeyDown method directly
-      component.onKeyDown(jEvent)
-
-      expect(jEvent.preventDefault).not.toHaveBeenCalled()
-      expect((component as any).navigateList).not.toHaveBeenCalled()
-    })
-
-    it('should not handle arrow keys in custom onKeyDown handler', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
-
-      // Mock document.activeElement to be inside a mat-list-option
-      const mockElement = document.createElement('div')
-      const mockListOption = document.createElement('mat-list-option')
-      mockListOption.appendChild(mockElement)
-      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
-        mockElement,
-      )
-      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
-
-      // Create a keydown event for 'ArrowDown'
+      // Create a keydown event for ArrowDown
       const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
       spyOn(event, 'preventDefault')
-      spyOn(event, 'stopPropagation')
-
-      // Call the onKeyDown method directly
-      component.onKeyDown(event)
-
-      // Arrow keys should be ignored by our custom handler
-      // to let Angular Material handle them natively
-      expect(event.preventDefault).not.toHaveBeenCalled()
-      expect(event.stopPropagation).not.toHaveBeenCalled()
-      expect((component as any).navigateList).not.toHaveBeenCalled()
-    })
-
-    it('should not handle ArrowUp in custom onKeyDown handler', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
-
-      // Mock document.activeElement to be inside a mat-list-option
-      const mockElement = document.createElement('div')
-      const mockListOption = document.createElement('mat-list-option')
-      mockListOption.appendChild(mockElement)
-      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
-        mockElement,
-      )
-      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
-
-      // Create a keydown event for 'ArrowUp'
-      const event = new KeyboardEvent('keydown', { key: 'ArrowUp' })
-      spyOn(event, 'preventDefault')
-      spyOn(event, 'stopPropagation')
-
-      // Call the onKeyDown method directly
-      component.onKeyDown(event)
-
-      // Arrow keys should be ignored by our custom handler
-      expect(event.preventDefault).not.toHaveBeenCalled()
-      expect(event.stopPropagation).not.toHaveBeenCalled()
-      expect((component as any).navigateList).not.toHaveBeenCalled()
-    })
-
-    it('should call stopPropagation for j/k keys', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
-
-      // Mock document.activeElement to be inside a mat-list-option
-      const mockElement = document.createElement('div')
-      const mockListOption = document.createElement('mat-list-option')
-      mockListOption.appendChild(mockElement)
-      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
-        mockElement,
-      )
-      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
-
-      // Create a keydown event for 'j'
-      const event = new KeyboardEvent('keydown', { key: 'j' })
-      spyOn(event, 'preventDefault')
-      spyOn(event, 'stopPropagation')
-
-      // Call the onKeyDown method directly
-      component.onKeyDown(event)
-
-      expect(event.preventDefault).toHaveBeenCalled()
-      expect(event.stopPropagation).toHaveBeenCalled()
-      expect((component as any).navigateList).toHaveBeenCalledWith('down')
-    })
-
-    it('should ignore non-j/k/Tab keys', () => {
-      // Spy on the navigateList method
-      spyOn(component as any, 'navigateList')
-
-      // Mock document.activeElement to be inside a mat-list-option
-      const mockElement = document.createElement('div')
-      const mockListOption = document.createElement('mat-list-option')
-      mockListOption.appendChild(mockElement)
-      spyOnProperty(document, 'activeElement', 'get').and.returnValue(
-        mockElement,
-      )
-      spyOn(mockElement, 'closest').and.returnValue(mockListOption)
-
-      // Create a keydown event for a different key
-      const event = new KeyboardEvent('keydown', { key: 'a' })
-      spyOn(event, 'preventDefault')
 
       // Call the onKeyDown method directly
       component.onKeyDown(event)
 
       expect(event.preventDefault).not.toHaveBeenCalled()
-      expect((component as any).navigateList).not.toHaveBeenCalled()
+      expect((component as any).navigateResults).not.toHaveBeenCalled()
+    })
+
+    it('should correctly navigate down through results', async () => {
+      // Set up mock data for testing navigation
+      const mockActions = [
+        { name: 'Action 1', action: async () => {} },
+        { name: 'Action 2', action: async () => {} },
+      ]
+      const mockTabs = [
+        {
+          name: 'Tab 1',
+          url: 'http://example.com',
+          faviconUrl: '',
+          tab: {} as any,
+        },
+      ]
+      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+
+      // Initialize the component and set up test data
+      await component.ngOnInit()
+      component.searchInput.setValue('test')
+
+      // Manually set the allResults$ to emit test data
+      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
+        mockResults,
+      )
+
+      component.selectedIndex = 0
+
+      // Call navigateResults directly
+      ;(component as any).navigateResults('down')
+
+      expect(component.selectedIndex).toBe(1)
+    })
+
+    it('should wrap around when navigating down from last result', async () => {
+      // Set up mock data for testing navigation
+      const mockActions = [
+        { name: 'Action 1', action: async () => {} },
+        { name: 'Action 2', action: async () => {} },
+      ]
+      const mockTabs = [
+        {
+          name: 'Tab 1',
+          url: 'http://example.com',
+          faviconUrl: '',
+          tab: {} as any,
+        },
+      ]
+      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+
+      // Initialize the component and set up test data
+      await component.ngOnInit()
+      component.searchInput.setValue('test')
+
+      // Manually set the allResults$ to emit test data
+      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
+        mockResults,
+      )
+
+      component.selectedIndex = 2 // Last result (total is 3)
+
+      // Call navigateResults directly
+      ;(component as any).navigateResults('down')
+
+      expect(component.selectedIndex).toBe(0) // Should wrap to first
+    })
+
+    it('should correctly navigate up through results', async () => {
+      // Set up mock data for testing navigation
+      const mockActions = [
+        { name: 'Action 1', action: async () => {} },
+        { name: 'Action 2', action: async () => {} },
+      ]
+      const mockTabs = [
+        {
+          name: 'Tab 1',
+          url: 'http://example.com',
+          faviconUrl: '',
+          tab: {} as any,
+        },
+      ]
+      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+
+      // Initialize the component and set up test data
+      await component.ngOnInit()
+      component.searchInput.setValue('test')
+
+      // Manually set the allResults$ to emit test data
+      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
+        mockResults,
+      )
+
+      component.selectedIndex = 1
+
+      // Call navigateResults directly
+      ;(component as any).navigateResults('up')
+
+      expect(component.selectedIndex).toBe(0)
+    })
+
+    it('should wrap around when navigating up from first result', async () => {
+      // Set up mock data for testing navigation
+      const mockActions = [
+        { name: 'Action 1', action: async () => {} },
+        { name: 'Action 2', action: async () => {} },
+      ]
+      const mockTabs = [
+        {
+          name: 'Tab 1',
+          url: 'http://example.com',
+          faviconUrl: '',
+          tab: {} as any,
+        },
+      ]
+      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+
+      // Initialize the component and set up test data
+      await component.ngOnInit()
+      component.searchInput.setValue('test')
+
+      // Manually set the allResults$ to emit test data
+      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
+        mockResults,
+      )
+
+      component.selectedIndex = 0
+
+      // Call navigateResults directly
+      ;(component as any).navigateResults('up')
+
+      expect(component.selectedIndex).toBe(2) // Should wrap to last (index 2)
     })
   })
 })

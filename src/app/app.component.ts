@@ -7,15 +7,8 @@ import {
 } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
-import { Observable } from 'rxjs'
-import { map, switchMap, tap } from 'rxjs/operators'
-import {
-  MatSelectionList,
-  MatSelectionListChange,
-  MatListModule,
-} from '@angular/material/list'
-import { MatFormFieldModule } from '@angular/material/form-field'
-import { MatInputModule } from '@angular/material/input'
+import { Observable, combineLatest, BehaviorSubject } from 'rxjs'
+import { map, switchMap, tap, startWith, shareReplay } from 'rxjs/operators'
 import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
@@ -35,6 +28,12 @@ interface SearchResult {
 
   tab?: Tab
   history?: HistoryItem
+}
+
+interface CombinedResults {
+  actions: BrowserAction[]
+  tabs: SearchResult[]
+  history: SearchResult[]
 }
 
 function filterUniqueValues(results: SearchResult[]): SearchResult[] {
@@ -60,32 +59,42 @@ function isBrowserAction(
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatListModule,
-    MatIconModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
 })
 export class AppComponent implements OnInit {
   title = 'butler'
   searchInput: UntypedFormControl = new UntypedFormControl()
 
-  @ViewChild(MatSelectionList) selectionList: MatSelectionList
   @ViewChild('searchInputRef') searchInputRef: ElementRef<HTMLInputElement>
 
+  // Combined results observable
+  allResults$: Observable<CombinedResults>
+
+  // Individual observables derived from combined results
   tabResults$: Observable<SearchResult[]>
   historyResults$: Observable<SearchResult[]>
+  browserActions$: Observable<BrowserAction[]>
+
+  // Computed observables
+  totalResults$: Observable<number>
+  hasAnyResults$: Observable<boolean>
 
   isSearchingHistory = false
-  browserActions$: Observable<BrowserAction[]>
+  private selectedIndexSubject = new BehaviorSubject<number>(0)
+  selectedIndex$ = this.selectedIndexSubject.asObservable()
 
   constructor(
     private chromeService: ChromeService,
     private chromeSharedOptionsService: ChromeSharedOptionsService,
   ) {}
+
+  get selectedIndex(): number {
+    return this.selectedIndexSubject.value
+  }
+
+  set selectedIndex(value: number) {
+    this.selectedIndexSubject.next(value)
+  }
 
   async ngOnInit(): Promise<void> {
     const options = await this.chromeSharedOptionsService.getOptions()
@@ -139,20 +148,24 @@ export class AppComponent implements OnInit {
       },
     ]
 
-    this.browserActions$ = this.searchInput.valueChanges.pipe(
+    // Create individual observables for each result type
+    const actions$ = this.searchInput.valueChanges.pipe(
+      startWith(''),
       map((searchInputText: string) => {
+        if (!searchInputText) {
+          return []
+        }
         return new Fuse<BrowserAction>(BROWSER_ACTIONS, {
           isCaseSensitive: false,
           keys: ['name'],
         })
           .search(searchInputText)
-          .map((value) => {
-            return value.item
-          })
+          .map((value) => value.item)
       }),
     )
 
-    this.tabResults$ = this.searchInput.valueChanges.pipe(
+    const tabs$ = this.searchInput.valueChanges.pipe(
+      startWith(''),
       switchMap((searchInputText) => {
         if (!searchInputText || !options.includesTabs) {
           return []
@@ -173,7 +186,8 @@ export class AppComponent implements OnInit {
       }),
     )
 
-    this.historyResults$ = this.searchInput.valueChanges.pipe(
+    const history$ = this.searchInput.valueChanges.pipe(
+      startWith(''),
       switchMap((searchInputText) => {
         if (!searchInputText || !options.includesHistory) {
           return []
@@ -200,89 +214,169 @@ export class AppComponent implements OnInit {
         this.isSearchingHistory = false
       }),
     )
+
+    // Combine all results into a single observable
+    this.allResults$ = combineLatest([actions$, tabs$, history$]).pipe(
+      map(([actions, tabs, history]) => ({ actions, tabs, history })),
+      tap(() => {
+        // Reset selection when results change
+        this.selectedIndex = 0
+      }),
+      shareReplay(1),
+    )
+
+    // Create individual observables for template use
+    this.browserActions$ = this.allResults$.pipe(
+      map((results) => results.actions),
+    )
+    this.tabResults$ = this.allResults$.pipe(map((results) => results.tabs))
+    this.historyResults$ = this.allResults$.pipe(
+      map((results) => results.history),
+    )
+
+    // Initialize computed observables
+    this.totalResults$ = this.allResults$.pipe(
+      map(
+        (results) =>
+          results.actions.length + results.tabs.length + results.history.length,
+      ),
+    )
+
+    this.hasAnyResults$ = this.totalResults$.pipe(map((total) => total > 0))
+  }
+
+  // Index calculation for result selection (now using observables)
+  getActionIndex(actionIndex: number): number {
+    return actionIndex
+  }
+
+  getTabIndex(tabIndex: number, allResults: CombinedResults): number {
+    return allResults.actions.length + tabIndex
+  }
+
+  getHistoryIndex(historyIndex: number, allResults: CombinedResults): number {
+    return allResults.actions.length + allResults.tabs.length + historyIndex
+  }
+
+  getActiveDescendantId(allResults: CombinedResults): string | null {
+    const totalResults =
+      allResults.actions.length +
+      allResults.tabs.length +
+      allResults.history.length
+    if (totalResults === 0) {
+      return null
+    }
+
+    const actionsCount = allResults.actions.length
+    const tabsCount = allResults.tabs.length
+
+    if (this.selectedIndex < actionsCount) {
+      return `action-${this.selectedIndex}`
+    } else if (this.selectedIndex < actionsCount + tabsCount) {
+      return `tab-${this.selectedIndex - actionsCount}`
+    } else {
+      return `history-${this.selectedIndex - actionsCount - tabsCount}`
+    }
   }
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    // Handle Tab key to move focus from input to first list option
-    if (
-      event.key === 'Tab' &&
-      document.activeElement === this.searchInputRef?.nativeElement &&
-      this.searchInput.value?.length > 0
-    ) {
-      const options = this.selectionList?.options.toArray()
-      if (options && options.length > 0) {
-        event.preventDefault()
-        options[0]._hostElement.focus()
-        return
-      }
-    }
-
-    // Only handle j/k when results are visible and focus is on the list options
     if (!this.searchInput.value || this.searchInput.value.length === 0) {
       return
     }
 
-    // Check if focus is on a mat-list-option or the selection list itself
-    const activeElement = document.activeElement
-    const isOnListOption = activeElement?.closest('mat-list-option') !== null
-    const isOnSelectionList =
-      activeElement?.closest('mat-selection-list') !== null
-
-    if (!isOnListOption && !isOnSelectionList) {
-      return
-    }
-
     switch (event.key) {
-      case 'j':
+      case 'ArrowDown':
         event.preventDefault()
-        event.stopPropagation()
-        this.navigateList('down')
+        this.navigateResults('down')
         break
-      case 'k':
+      case 'Tab':
         event.preventDefault()
-        event.stopPropagation()
-        this.navigateList('up')
+        if (event.shiftKey) {
+          this.navigateResults('up')
+        } else {
+          this.navigateResults('down')
+        }
         break
-      // For arrow keys, let Angular Material handle them completely
-      // Don't interfere to avoid breaking selection functionality
+      case 'ArrowUp':
+        event.preventDefault()
+        this.navigateResults('up')
+        break
+      case 'Enter':
+        event.preventDefault()
+        this.selectCurrentResult()
+        break
+      case 'Escape':
+        event.preventDefault()
+        this.searchInput.reset()
+        this.searchInputRef?.nativeElement.focus()
+        break
     }
   }
 
-  private navigateList(direction: 'up' | 'down'): void {
-    if (!this.selectionList) {
+  private navigateResults(direction: 'up' | 'down'): void {
+    if (!this.allResults$) {
       return
     }
 
-    const options = this.selectionList.options.toArray()
-    if (options.length === 0) {
-      return
-    }
-
-    const activeElement = document.activeElement
-    const currentOption = activeElement?.closest('mat-list-option')
-
-    let currentIndex = -1
-    if (currentOption) {
-      currentIndex = options.findIndex(
-        (option) => option._hostElement === currentOption,
+    // Get current results to calculate total
+    this.allResults$
+      .pipe(
+        map(
+          (results) =>
+            results.actions.length +
+            results.tabs.length +
+            results.history.length,
+        ),
       )
+      .subscribe((totalResults) => {
+        if (totalResults === 0) {
+          return
+        }
+
+        if (direction === 'down') {
+          this.selectedIndex = (this.selectedIndex + 1) % totalResults
+        } else {
+          this.selectedIndex =
+            this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1
+        }
+      })
+      .unsubscribe()
+  }
+
+  private selectCurrentResult(): void {
+    if (!this.allResults$) {
+      return
     }
 
-    let nextIndex
-    if (direction === 'down') {
-      nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0
-    } else {
-      nextIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1
-    }
+    this.allResults$
+      .subscribe((results) => {
+        const actionsCount = results.actions.length
+        const tabsCount = results.tabs.length
 
-    // Focus and select the next option
-    const nextOption = options[nextIndex]
-    nextOption._hostElement.focus()
-
-    // Trigger selection change
-    this.selectionList.selectedOptions.clear()
-    nextOption.selected = true
+        if (this.selectedIndex < actionsCount) {
+          // Select from actions
+          const action = results.actions[this.selectedIndex]
+          if (action) {
+            this.onClickItem(action)
+          }
+        } else if (this.selectedIndex < actionsCount + tabsCount) {
+          // Select from tabs
+          const tabIndex = this.selectedIndex - actionsCount
+          const tab = results.tabs[tabIndex]
+          if (tab) {
+            this.onClickItem(tab)
+          }
+        } else {
+          // Select from history
+          const historyIndex = this.selectedIndex - actionsCount - tabsCount
+          const history = results.history[historyIndex]
+          if (history) {
+            this.onClickItem(history)
+          }
+        }
+      })
+      .unsubscribe()
   }
 
   async onClickItem(result: SearchResult | BrowserAction): Promise<void> {
@@ -302,9 +396,5 @@ export class AppComponent implements OnInit {
     }
     // close the popup window.
     window.close()
-  }
-
-  async onSelectionChange(event: MatSelectionListChange): Promise<void> {
-    await this.onClickItem(event.options[0].value)
   }
 }
