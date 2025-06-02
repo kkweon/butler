@@ -340,6 +340,9 @@ export class AppComponent implements OnInit {
           this.selectedIndex =
             this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1
         }
+
+        // Scroll selected item into view
+        this.scrollSelectedItemIntoView()
       })
       .unsubscribe()
   }
@@ -377,6 +380,31 @@ export class AppComponent implements OnInit {
         }
       })
       .unsubscribe()
+  }
+
+  private scrollSelectedItemIntoView(): void {
+    // Use setTimeout to ensure DOM has been updated after selectedIndex change
+    setTimeout(() => {
+      if (!this.allResults$) {
+        return
+      }
+
+      this.allResults$
+        .subscribe((results) => {
+          const elementId = this.getActiveDescendantId(results)
+          if (elementId) {
+            const element = document.getElementById(elementId)
+            if (element) {
+              element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest',
+              })
+            }
+          }
+        })
+        .unsubscribe()
+    }, 0)
   }
 
   async onClickItem(result: SearchResult | BrowserAction): Promise<void> {
