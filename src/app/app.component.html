@@ -1,4 +1,4 @@
-<div class="command-palette">
+<div class="command-palette" role="dialog" aria-label="Command palette search">
   <div class="search-container">
     <input
       class="search-input"
@@ -7,25 +7,43 @@
       [formControl]="searchInput"
       autofocus
       #searchInputRef
+      role="combobox"
+      aria-expanded="true"
+      aria-autocomplete="list"
+      [attr.aria-activedescendant]="getActiveDescendantId()"
+      aria-label="Search tabs, history, and actions"
     />
   </div>
 
-  <div class="results-container" *ngIf="searchInput.value?.length > 0">
+  <div
+    class="results-container"
+    *ngIf="searchInput.value?.length > 0"
+    role="listbox"
+    aria-label="Search results"
+  >
     <!-- Browser Actions Group -->
-    <div class="result-group" *ngIf="(browserActions$ | async)?.length > 0">
+    <div
+      class="result-group"
+      *ngIf="(browserActions$ | async)?.length > 0"
+      role="group"
+      aria-label="Actions"
+    >
       <div class="result-group-header">
-        <mat-icon>settings</mat-icon>
+        <mat-icon aria-hidden="true">settings</mat-icon>
         ACTIONS ({{ (browserActions$ | async)?.length }})
       </div>
       <button
         class="result-item"
         *ngFor="let browserAction of browserActions$ | async; let i = index"
         [class.selected]="selectedIndex === getActionIndex(i)"
+        [id]="'action-' + i"
         (click)="onClickItem(browserAction)"
         (keydown.enter)="onClickItem(browserAction)"
+        role="option"
+        [attr.aria-selected]="selectedIndex === getActionIndex(i)"
       >
         <div class="result-icon">
-          <mat-icon>bolt</mat-icon>
+          <mat-icon aria-hidden="true">bolt</mat-icon>
         </div>
         <div class="result-content">
           <div class="result-title">{{ browserAction.name }}</div>
@@ -34,27 +52,35 @@
     </div>
 
     <!-- Tabs Group -->
-    <div class="result-group" *ngIf="(tabResults$ | async)?.length > 0">
+    <div
+      class="result-group"
+      *ngIf="(tabResults$ | async)?.length > 0"
+      role="group"
+      aria-label="Open tabs"
+    >
       <div class="result-group-header">
-        <mat-icon>tab</mat-icon>
+        <mat-icon aria-hidden="true">tab</mat-icon>
         TABS ({{ (tabResults$ | async)?.length }})
       </div>
       <button
         class="result-item"
         *ngFor="let searchResult of tabResults$ | async; let i = index"
         [class.selected]="selectedIndex === getTabIndex(i)"
+        [id]="'tab-' + i"
         (click)="onClickItem(searchResult)"
         (keydown.enter)="onClickItem(searchResult)"
+        role="option"
+        [attr.aria-selected]="selectedIndex === getTabIndex(i)"
       >
         <div class="result-icon">
           <img
             *ngIf="searchResult.faviconUrl; else defaultTabIcon"
             class="favicon"
             [src]="searchResult.faviconUrl"
-            [alt]="searchResult.name"
+            [alt]="'Favicon for ' + searchResult.name"
           />
           <ng-template #defaultTabIcon>
-            <mat-icon>tab</mat-icon>
+            <mat-icon aria-hidden="true">tab</mat-icon>
           </ng-template>
         </div>
         <div class="result-content">
@@ -65,20 +91,28 @@
     </div>
 
     <!-- History Group -->
-    <div class="result-group" *ngIf="(historyResults$ | async)?.length > 0">
+    <div
+      class="result-group"
+      *ngIf="(historyResults$ | async)?.length > 0"
+      role="group"
+      aria-label="Browser history"
+    >
       <div class="result-group-header">
-        <mat-icon>history</mat-icon>
+        <mat-icon aria-hidden="true">history</mat-icon>
         HISTORY ({{ (historyResults$ | async)?.length }})
       </div>
       <button
         class="result-item"
         *ngFor="let searchResult of historyResults$ | async; let i = index"
         [class.selected]="selectedIndex === getHistoryIndex(i)"
+        [id]="'history-' + i"
         (click)="onClickItem(searchResult)"
         (keydown.enter)="onClickItem(searchResult)"
+        role="option"
+        [attr.aria-selected]="selectedIndex === getHistoryIndex(i)"
       >
         <div class="result-icon">
-          <mat-icon>history</mat-icon>
+          <mat-icon aria-hidden="true">history</mat-icon>
         </div>
         <div class="result-content">
           <div class="result-title">{{ searchResult.name }}</div>
@@ -88,13 +122,23 @@
     </div>
 
     <!-- Loading State -->
-    <div class="loading-state" *ngIf="isSearchingHistory">
-      <mat-icon>refresh</mat-icon>
+    <div
+      class="loading-state"
+      *ngIf="isSearchingHistory"
+      role="status"
+      aria-live="polite"
+    >
+      <mat-icon aria-hidden="true">refresh</mat-icon>
       Loading history...
     </div>
 
     <!-- Empty State -->
-    <div class="empty-state" *ngIf="!hasAnyResults && !isSearchingHistory">
+    <div
+      class="empty-state"
+      *ngIf="!hasAnyResults && !isSearchingHistory"
+      role="status"
+      aria-live="polite"
+    >
       No results found for "{{ searchInput.value }}"
     </div>
   </div>

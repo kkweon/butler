@@ -242,6 +242,23 @@ export class AppComponent implements OnInit {
     return this.currentActions.length + this.currentTabs.length + historyIndex
   }
 
+  getActiveDescendantId(): string | null {
+    if (this.totalResults === 0) {
+      return null
+    }
+
+    const actionsCount = this.currentActions.length
+    const tabsCount = this.currentTabs.length
+
+    if (this.selectedIndex < actionsCount) {
+      return `action-${this.selectedIndex}`
+    } else if (this.selectedIndex < actionsCount + tabsCount) {
+      return `tab-${this.selectedIndex - actionsCount}`
+    } else {
+      return `history-${this.selectedIndex - actionsCount - tabsCount}`
+    }
+  }
+
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
     if (!this.searchInput.value || this.searchInput.value.length === 0) {
