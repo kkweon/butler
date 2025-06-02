@@ -79,6 +79,7 @@ describe('AppComponent', () => {
     expect(component).toBeTruthy()
   })
 
+  // eslint-disable-next-line quotes
   it("should have as title 'butler'", () => {
     expect(component.title).toEqual('butler')
   })
