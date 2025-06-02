@@ -14,7 +14,11 @@
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet"
     />
-    <script src="options-redirect.js"></script>
   </head>
-  <body class="mat-typography"></body>
+  <body class="mat-typography">
+    <app-container></app-container>
+    <script src="runtime.js" type="module"></script>
+    <script src="polyfills.js" type="module"></script>
+    <script src="main.js" type="module"></script>
+  </body>
 </html>
