@@ -6,7 +6,7 @@ import {
 } from '@angular/material/slide-toggle'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
-import { ChromeSharedOptionsService } from 'chrome-shared-options'
+import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 
 function fixWrongInputDate(wrongDate: Date): Date {
   return new Date(
@@ -26,9 +26,9 @@ function getYYYYMMDD(unixEpoch: number | Date): string {
 }
 
 @Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
+  selector: 'app-options',
+  templateUrl: './options.component.html',
+  styleUrls: ['./options.component.scss'],
   standalone: true,
   imports: [
     CommonModule,
@@ -37,7 +37,7 @@ function getYYYYMMDD(unixEpoch: number | Date): string {
     MatInputModule,
   ],
 })
-export class AppComponent implements OnInit {
+export class OptionsComponent implements OnInit {
   title = 'options'
   includesBookmarks: boolean
   includesTabs: boolean

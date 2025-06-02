@@ -1,21 +1,22 @@
 import { enableProdMode, importProvidersFrom } from '@angular/core'
 import { bootstrapApplication, BrowserModule } from '@angular/platform-browser'
 
-import { AppComponent } from './app/app.component'
+import { ContainerComponent } from './app/container.component'
 import { environment } from './environments/environment'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatInputModule } from '@angular/material/input'
 import { MatListModule } from '@angular/material/list'
 import { ReactiveFormsModule } from '@angular/forms'
-import { ChromeSharedOptionsModule } from 'chrome-shared-options'
 import { MatIconModule } from '@angular/material/icon'
+import { MatSlideToggleModule } from '@angular/material/slide-toggle'
+import { provideRouter } from '@angular/router'
 
 if (environment.production) {
   enableProdMode()
 }
 
-bootstrapApplication(AppComponent, {
+bootstrapApplication(ContainerComponent, {
   providers: [
     importProvidersFrom(
       BrowserModule,
@@ -24,8 +25,9 @@ bootstrapApplication(AppComponent, {
       MatInputModule,
       ReactiveFormsModule,
       MatListModule,
-      ChromeSharedOptionsModule,
       MatIconModule,
+      MatSlideToggleModule,
     ),
+    provideRouter([]),
   ],
 }).catch((err) => console.error(err))
