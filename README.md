@@ -42,6 +42,23 @@ Install Butler directly from the [Chrome Web Store](https://chrome.google.com/we
 
 This project uses Angular 20 with a single project structure.
 
+### Development Workflow
+
+To develop and test the Butler extension locally, follow these steps:
+
+1.  **Build and Watch:** Run `yarn build --watch` in your terminal. This command compiles the extension and watches for any file changes, rebuilding automatically.
+2.  **Output Directory:** The compiled extension files will be located in the `dist/butler` folder.
+3.  **Load Unpacked Extension:**
+    *   Open Chrome and navigate to `chrome://extensions`.
+    *   Enable "Developer mode" (usually a toggle in the top right corner).
+    *   Click on "Load unpacked" and select the `dist/butler` folder.
+4.  **Set Keyboard Shortcut (Recommended):**
+    *   In `chrome://extensions/shortcuts`, find the Butler extension.
+    *   Set a convenient keyboard shortcut (e.g., `Ctrl+K` or `Cmd+K`) to quickly open the extension popup.
+5.  **Live Development:** With this setup, any changes you make to the source code will trigger a rebuild, and you can test the updated extension by simply reopening it (or by Chrome automatically reloading it, depending on the type of change).
+
+This workflow allows for an efficient live development and testing cycle.
+
 ### Prerequisites
 
 - Node.js 22+
