@@ -111,7 +111,8 @@ Adhere to the following coding conventions:
 
 - **Chrome Extension Manifest V3**: Target platform for the Butler extension.
   - The extension provides unified search interface for browser tabs, history, and actions.
-  - Multi-project Angular workspace structure: main extension (`src/`), options page (`projects/options/`), and shared library (`projects/chrome-shared-options/`).
+  - Single Angular project structure located in `src/`, containing the main extension popup, options page, and shared services.
+  - The extension provides a unified search interface for browser tabs, history, and actions.
   - Key Chrome APIs used: `chrome.tabs`, `chrome.history`, `chrome.storage`, `chrome.windows`.
 
 ### Development Tools
@@ -119,7 +120,7 @@ Adhere to the following coding conventions:
 - **Husky**: Git hooks for code quality enforcement.
   - Pre-commit hook runs `pretty-quick` to format staged files automatically.
 - **semantic-release**: Automated release management and Chrome Web Store publishing.
-- **TSLint**: Refer to `tslint.json` for specific linting rules. While TSLint is present, be mindful that the project might migrate to ESLint in the future. Prioritize rules in `tslint.json`.
+- **ESLint**: Refer to `.eslintrc.json` for specific linting rules.
 
 ## 3. Testing Guidelines
 
@@ -190,7 +191,7 @@ footer (optional)
   - `revert`: Reverts a previous commit.
   - `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc).
   - `test`: Adding missing tests or correcting existing tests.
-- **Scope (Optional)**: The scope should be the name of the npm package affected (as perceived by person reading changelog generated from commit messages). Examples: `core`, `options`, `chrome-shared-options`.
+- **Scope (Optional)**: The scope should be a logical part of the application affected (e.g., `app`, `options`, `ui`, `search`, `core`).
 - **Subject**: A concise description of the change.
   - Use the imperative, present tense: "change" not "changed" nor "changes".
   - Don't capitalize the first letter.
@@ -209,7 +210,7 @@ This closes #123.
 
 ## 5. Additional Project-Specific Practices
 
-- **Modularity**: Strive for modular and reusable code, especially within the `chrome-shared-options` library project.
+- **Modularity**: Strive for modular and reusable code, for example by organizing shared functionality into services.
 - **Build System**: Be aware of the project structure (`butler`, `options`, `chrome-shared-options`) and how they are built (see `angular.json` and `package.json` scripts). Changes should not break the build.
 - **Error Handling**: Implement robust error handling, especially for API calls or Chrome extension API interactions.
 - **Chrome Extension APIs**: When interacting with Chrome extension APIs (e.g., `chrome.storage`, `chrome.tabs`), ensure correct usage and handle callbacks or Promises appropriately.

@@ -1,37 +1,42 @@
-<div class="container">
-  <h1>Options</h1>
-  <div>
-    <mat-slide-toggle
-      [checked]="includesBookmarks"
-      (change)="toggleBookmarks($event)"
-      >Includes Bookmarks
-    </mat-slide-toggle>
-  </div>
-  <div>
-    <mat-slide-toggle [checked]="includesTabs" (change)="toggleTabs($event)"
-      >Includes Tabs</mat-slide-toggle
-    >
-  </div>
-  <div>
-    <mat-slide-toggle
-      [checked]="includesHistory"
-      (change)="toggleHistory($event)"
-      >Includes History</mat-slide-toggle
-    >
-  </div>
+<div class="options-container">
+  <header class="options-header">
+    <h1>Options</h1>
+  </header>
 
-  <section>
-    <mat-form-field appearance="fill">
-      <mat-label
-        >Start date for searching history (default is set to 0 which means all
-        history)</mat-label
+  <section class="options-section">
+    <h2>Search Inclusions</h2>
+    <div class="option-item">
+      <mat-slide-toggle
+        [checked]="includesBookmarks"
+        (change)="toggleBookmarks($event)"
+        >Include Bookmarks
+      </mat-slide-toggle>
+    </div>
+    <div class="option-item">
+      <mat-slide-toggle [checked]="includesTabs" (change)="toggleTabs($event)"
+        >Include Tabs</mat-slide-toggle
       >
+    </div>
+    <div class="option-item">
+      <mat-slide-toggle
+        [checked]="includesHistory"
+        (change)="toggleHistory($event)"
+        >Include History</mat-slide-toggle
+      >
+    </div>
+  </section>
+
+  <section class="options-section">
+    <h2>History Settings</h2>
+    <mat-form-field appearance="fill" class="date-picker-field">
+      <mat-label>Start date for searching history</mat-label>
       <input
         matInput
         type="date"
         [value]="startDate"
         (change)="updateStartDate($event)"
       />
+      <mat-hint>Default is all history (leave empty or set to a very old date).</mat-hint>
     </mat-form-field>
   </section>
 </div>
