@@ -310,12 +310,15 @@ export class AppComponent implements OnInit {
               isCaseSensitive: false,
             })
 
-            return fuse.search(searchInputText || '').map(({ item: bookmark }) => ({ // Ensure text is not null for Fuse
-              faviconUrl: `chrome://favicon/${bookmark.url}`,
-              name: bookmark.title,
-              url: bookmark.url,
-              bookmark,
-            }))
+            return fuse
+              .search(searchInputText || '')
+              .map(({ item: bookmark }) => ({
+                // Ensure text is not null for Fuse
+                faviconUrl: `chrome://favicon/${bookmark.url}`,
+                name: bookmark.title,
+                url: bookmark.url,
+                bookmark,
+              }))
           })
           .catch((error) => {
             console.error('Error fetching or searching bookmarks:', error)
