@@ -19,24 +19,37 @@ const basePlugins = [
   }),
 ]
 
+// Determine if running in watch mode by checking process.argv
+// This is a common way ng build --watch is invoked.
+const isWatchMode = process.argv.includes('--watch');
+
 if (process.env.RUN_UPDATE_MANIFEST === 'true') {
-  basePlugins.push(
-    new WebpackShellPluginNext({
-      onDoneWatch: {
-        // This hook runs after each compilation in watch mode.
-        scripts: ['bash scripts/update-manifest.sh'],
-        blocking: true, // Ensures webpack waits for the script to finish
-        parallel: false,
-      },
-      // Keep onBuildExit for non-watch builds to ensure it runs at least once
-      // and for production builds where watch mode isn't typical.
-      onBuildExit: {
-        scripts: ['bash scripts/update-manifest.sh'],
-        blocking: true,
-        parallel: false,
-      },
-    }),
-  )
+  const shellPluginOptions = {};
+
+  if (isWatchMode) {
+    console.log('Configuring WebpackShellPluginNext for watch mode (onDoneWatch).');
+    shellPluginOptions.onDoneWatch = {
+      scripts: ['bash scripts/update-manifest.sh'],
+      blocking: true,
+      parallel: false,
+    };
+  } else {
+    console.log('Configuring WebpackShellPluginNext for single build (onBuildExit).');
+    shellPluginOptions.onBuildExit = {
+      scripts: ['bash scripts/update-manifest.sh'],
+      blocking: true,
+      parallel: false,
+    };
+  }
+
+  // Add onBuildStart to log when the script is supposed to run, for debugging.
+  // shellPluginOptions.onBuildStart = {
+  //   scripts: ['echo WebpackShellPluginNext: onBuildStart triggered'],
+  //   blocking: false,
+  //   parallel: true,
+  // };
+
+  basePlugins.push(new WebpackShellPluginNext(shellPluginOptions));
 }
 
 module.exports = {
