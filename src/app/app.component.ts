@@ -15,6 +15,7 @@ import {
   startWith,
   shareReplay,
   catchError,
+  take,
 } from 'rxjs/operators'
 import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
@@ -579,5 +580,81 @@ export class AppComponent implements OnInit {
     }
     // close the popup window.
     window.close()
+  }
+
+  public onItemClicked(event: Event): void {
+    let targetElement = event.target as HTMLElement
+    let buttonElement: HTMLButtonElement | null = null
+
+    // Traverse up to find the button.result-item
+    while (targetElement && targetElement !== event.currentTarget) {
+      if (
+        targetElement.nodeName === 'BUTTON' &&
+        targetElement.classList.contains('result-item')
+      ) {
+        buttonElement = targetElement as HTMLButtonElement
+        break
+      }
+      targetElement = targetElement.parentElement
+    }
+
+    if (!buttonElement) {
+      return // Click was not on a result item or its descendant
+    }
+
+    const id = buttonElement.id
+    if (!id) {
+      return
+    }
+
+    // Parse id (e.g., "action-0", "tab-1")
+    const parts = id.split('-')
+    if (parts.length !== 2) {
+      return
+    }
+    const type = parts[0]
+    const localIndex = parseInt(parts[1], 10)
+
+    if (isNaN(localIndex)) {
+      return
+    }
+
+    this.allResults$.pipe(take(1)).subscribe((results) => {
+      let itemToClick: SearchResult | BrowserAction | undefined
+      let globalIndex = 0 // To set the selectedIndex
+
+      switch (type) {
+        case 'action':
+          if (localIndex < results.actions.length) {
+            itemToClick = results.actions[localIndex]
+            globalIndex = this.getActionIndex(localIndex)
+          }
+          break
+        case 'tab':
+          if (localIndex < results.tabs.length) {
+            itemToClick = results.tabs[localIndex]
+            globalIndex = this.getTabIndex(localIndex, results)
+          }
+          break
+        case 'bookmark':
+          if (localIndex < results.bookmarks.length) {
+            itemToClick = results.bookmarks[localIndex]
+            globalIndex = this.getBookmarkIndex(localIndex, results)
+          }
+          break
+        case 'history':
+          if (localIndex < results.history.length) {
+            itemToClick = results.history[localIndex]
+            globalIndex = this.getHistoryIndex(localIndex, results)
+          }
+          break
+      }
+
+      if (itemToClick) {
+        this.selectedIndex = globalIndex // Update selected index to reflect the click
+        this.onClickItem(itemToClick) // Perform the action
+      }
+    })
+    // take(1) completes the observable, so explicit unsubscribe is not strictly needed here.
   }
 }
