@@ -26,6 +26,7 @@ describe('AppComponent', () => {
       'sortTabsInAllWindows',
       'getCurrentActiveTab',
       'copyToClipboard',
+      'bookmarksSearch', // Added bookmarksSearch
     ])
 
     const chromeSharedOptionsServiceSpy = jasmine.createSpyObj(
@@ -45,6 +46,7 @@ describe('AppComponent', () => {
 
     chromeServiceSpy.tabsQuery.and.returnValue(Promise.resolve([]))
     chromeServiceSpy.historySearch.and.returnValue(Promise.resolve([]))
+    chromeServiceSpy.bookmarksSearch.and.returnValue(Promise.resolve([])) // Added default mock for bookmarksSearch
 
     TestBed.configureTestingModule({
       imports: [
