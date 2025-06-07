@@ -389,37 +389,59 @@ export class AppComponent implements OnInit {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    // Allow navigation and Escape key even if searchInput is empty.
-    // The navigateResults and selectCurrentResult methods have their own guards
-    // based on the actual number of results.
+    // Subscribe to allResults$ to get the current results state for conditional logic
+    this.allResults$.pipe(take(1)).subscribe(currentResults => {
+      const totalResults =
+        currentResults.actions.length +
+        currentResults.tabs.length +
+        currentResults.bookmarks.length +
+        currentResults.history.length;
 
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault()
-        this.navigateResults('down')
-        break
-      case 'Tab':
-        event.preventDefault()
-        if (event.shiftKey) {
-          this.navigateResults('up')
-        } else {
-          this.navigateResults('down')
-        }
-        break
-      case 'ArrowUp':
-        event.preventDefault()
-        this.navigateResults('up')
-        break
-      case 'Enter':
-        event.preventDefault()
-        this.selectCurrentResult()
-        break
-      case 'Escape':
-        event.preventDefault()
-        this.searchInput.reset()
-        this.searchInputRef?.nativeElement.focus()
-        break
-    }
+      // Allow navigation if totalResults > 0.
+      // Escape is always handled.
+      // The navigateResults and selectCurrentResult methods also have internal guards.
+
+      switch (event.key) {
+        case 'ArrowDown':
+          if (totalResults > 0) {
+            event.preventDefault();
+            this.navigateResults('down');
+          }
+          break;
+        case 'Tab':
+          if (totalResults > 0) {
+            event.preventDefault();
+            if (event.shiftKey) {
+              this.navigateResults('up');
+            } else {
+              this.navigateResults('down');
+            }
+          }
+          // If totalResults is 0, Tab performs its default browser action (e.g., focus change).
+          break;
+        case 'ArrowUp':
+          if (totalResults > 0) {
+            event.preventDefault();
+            this.navigateResults('up');
+          }
+          break;
+        case 'Enter':
+          // Prevent default and select only if there are results and selectedIndex is valid.
+          if (totalResults > 0 && this.selectedIndex < totalResults) {
+            event.preventDefault();
+            this.selectCurrentResult();
+          }
+          // If no results or selectedIndex is out of bounds for current results,
+          // Enter might perform default browser action (e.g., if inside a form).
+          break;
+        case 'Escape':
+          event.preventDefault(); // Always handle Escape
+          this.searchInput.reset();
+          this.searchInputRef?.nativeElement.focus();
+          break;
+      }
+    });
+    // take(1) ensures the subscription is automatically unsubscribed.
   }
 
   private navigateResults(direction: 'up' | 'down'): void {
