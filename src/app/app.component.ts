@@ -389,6 +389,10 @@ export class AppComponent implements OnInit {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    if (!this.allResults$) {
+      // allResults$ might not be initialized yet if a key event occurs very early.
+      return;
+    }
     // Subscribe to allResults$ to get the current results state for conditional logic
     this.allResults$.pipe(take(1)).subscribe(currentResults => {
       const totalResults =
