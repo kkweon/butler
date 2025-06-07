@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "clean": "rm -rf dist",
     "build": "yarn build:butler",
     "build:butler": "ng build butler",
     "build:prod": "yarn build:butler --configuration production",
