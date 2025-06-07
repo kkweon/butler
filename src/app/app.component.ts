@@ -241,7 +241,7 @@ export class AppComponent implements OnInit {
               keys: ['title', 'url'],
               isCaseSensitive: false,
             })
-            const searchResults = fuse.search(searchInputText)
+            const searchResults = fuse.search(searchInputText || '') // Ensure text is not null
 
             return searchResults.map(({ item: tab }) => ({
               faviconUrl: tab.favIconUrl,
@@ -267,7 +267,7 @@ export class AppComponent implements OnInit {
         this.isSearchingHistory = true
         return this.chromeService
           .historySearch({
-            text: searchInputText,
+            text: searchInputText || '', // Ensure text is not null
             startTime: options.searchHistoryStartDateInUnixEpoch,
           })
           .then((histories) => {
@@ -298,7 +298,7 @@ export class AppComponent implements OnInit {
           return of([]) // Return an observable of empty array
         }
         return this.chromeService
-          .bookmarksSearch(searchInputText) // API handles empty searchInputText
+          .bookmarksSearch(searchInputText || '') // Ensure text is not null for API
           .then((bookmarks) => {
             // Filter out bookmark folders (they don't have URLs)
             const bookmarkItems = bookmarks.filter((bookmark) => bookmark.url)
@@ -309,7 +309,7 @@ export class AppComponent implements OnInit {
               isCaseSensitive: false,
             })
 
-            return fuse.search(searchInputText).map(({ item: bookmark }) => ({
+            return fuse.search(searchInputText || '').map(({ item: bookmark }) => ({ // Ensure text is not null for Fuse
               faviconUrl: `chrome://favicon/${bookmark.url}`,
               name: bookmark.title,
               url: bookmark.url,
