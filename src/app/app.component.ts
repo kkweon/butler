@@ -35,7 +35,6 @@ import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
   imports: [CommonModule, ReactiveFormsModule, MatIconModule],
 })
 export class AppComponent implements OnInit {
-  title = 'butler'
   searchInput: UntypedFormControl = new UntypedFormControl()
 
   @ViewChild('searchInputRef') searchInputRef: ElementRef<HTMLInputElement>
@@ -446,7 +445,6 @@ export class AppComponent implements OnInit {
           this.selectCurrentResult();
         }
         break;
-      // Escape is handled above.
     }
   }
 

@@ -26,7 +26,7 @@ describe('AppComponent', () => {
       'sortTabsInAllWindows',
       'getCurrentActiveTab',
       'copyToClipboard',
-      'bookmarksSearch', // Added bookmarksSearch
+      'bookmarksSearch',
     ])
 
     const chromeSharedOptionsServiceSpy = jasmine.createSpyObj(
@@ -46,14 +46,14 @@ describe('AppComponent', () => {
 
     chromeServiceSpy.tabsQuery.and.returnValue(Promise.resolve([]))
     chromeServiceSpy.historySearch.and.returnValue(Promise.resolve([]))
-    chromeServiceSpy.bookmarksSearch.and.returnValue(Promise.resolve([])) // Added default mock for bookmarksSearch
+    chromeServiceSpy.bookmarksSearch.and.returnValue(Promise.resolve([]))
 
     TestBed.configureTestingModule({
       imports: [
-        AppComponent, // Import the standalone component
+        AppComponent,
         ReactiveFormsModule,
         MatIconModule,
-        BrowserAnimationsModule, // Often needed for Material components in tests
+        BrowserAnimationsModule,
       ],
       providers: [
         { provide: ChromeService, useValue: chromeServiceSpy },
@@ -104,19 +104,14 @@ describe('AppComponent', () => {
       };
       // Total results: 2 + 1 + 1 + 1 = 5
 
-      fixture.detectChanges(); // Apply the changes
-      await fixture.whenStable(); // Ensure component state is stable
+      fixture.detectChanges();
+      await fixture.whenStable();
     });
 
     it('should handle ArrowDown key to navigate results', () => {
-      // Spy on the navigateResults method
       spyOn(component as any, 'navigateResults')
-
-      // Create a keydown event for ArrowDown
       const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
       spyOn(event, 'preventDefault')
-
-      // Call the onKeyDown method directly
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
@@ -124,14 +119,9 @@ describe('AppComponent', () => {
     })
 
     it('should handle ArrowUp key to navigate results', () => {
-      // Spy on the navigateResults method
       spyOn(component as any, 'navigateResults')
-
-      // Create a keydown event for ArrowUp
       const event = new KeyboardEvent('keydown', { key: 'ArrowUp' })
       spyOn(event, 'preventDefault')
-
-      // Call the onKeyDown method directly
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
@@ -139,14 +129,9 @@ describe('AppComponent', () => {
     })
 
     it('should handle Tab key to navigate results down', () => {
-      // Spy on the navigateResults method
       spyOn(component as any, 'navigateResults')
-
-      // Create a keydown event for Tab
       const event = new KeyboardEvent('keydown', { key: 'Tab' })
       spyOn(event, 'preventDefault')
-
-      // Call the onKeyDown method directly
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
@@ -154,14 +139,9 @@ describe('AppComponent', () => {
     })
 
     it('should handle Shift+Tab key to navigate results up', () => {
-      // Spy on the navigateResults method
       spyOn(component as any, 'navigateResults')
-
-      // Create a keydown event for Shift+Tab
       const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true })
       spyOn(event, 'preventDefault')
-
-      // Call the onKeyDown method directly
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
@@ -169,14 +149,9 @@ describe('AppComponent', () => {
     })
 
     it('should handle Enter key to select current result', () => {
-      // Spy on the selectCurrentResult method
       spyOn(component as any, 'selectCurrentResult')
-
-      // Create a keydown event for Enter
       const event = new KeyboardEvent('keydown', { key: 'Enter' })
       spyOn(event, 'preventDefault')
-
-      // Call the onKeyDown method directly
       component.onKeyDown(event)
 
       expect(event.preventDefault).toHaveBeenCalled()
@@ -184,12 +159,9 @@ describe('AppComponent', () => {
     })
 
     it('should handle Escape key to clear search', () => {
-      // Mock the searchInputRef
       component.searchInputRef = {
         nativeElement: { focus: jasmine.createSpy('focus') },
       } as any
-
-      // Create a keydown event for Escape
       const event = new KeyboardEvent('keydown', { key: 'Escape' })
       spyOn(event, 'preventDefault')
       spyOn(component.searchInput, 'reset')
@@ -212,11 +184,8 @@ describe('AppComponent', () => {
       spyOn(component as any, 'navigateResults');
       spyOn(component as any, 'selectCurrentResult');
 
-      // Create a keydown event for ArrowDown
       const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
       spyOn(event, 'preventDefault');
-
-      // Call the onKeyDown method directly
       component.onKeyDown(event);
 
       // ArrowDown should not be prevented, and navigation should not occur if no results
@@ -247,30 +216,21 @@ describe('AppComponent', () => {
       // latestResults is set in beforeEach to have 5 items.
       // Indices: 0, 1 (actions), 2 (tabs), 3 (bookmarks), 4 (history)
       component.selectedIndex = 4; // Last result (index 4 out of 0-4)
-
-      // Call navigateResults directly
       (component as any).navigateResults('down');
-
       expect(component.selectedIndex).toBe(0); // Should wrap to first
     });
 
     it('should correctly navigate up through results', () => {
       // latestResults is set in beforeEach to have 5 items.
       component.selectedIndex = 1;
-
-      // Call navigateResults directly
       (component as any).navigateResults('up');
-
       expect(component.selectedIndex).toBe(0);
     });
 
     it('should wrap around when navigating up from first result', () => {
       // latestResults is set in beforeEach to have 5 items.
       component.selectedIndex = 0;
-
-      // Call navigateResults directly
       (component as any).navigateResults('up');
-
       expect(component.selectedIndex).toBe(4); // Should wrap to last (index 4 for 5 items)
     });
   })
@@ -334,7 +294,6 @@ describe('AppComponent', () => {
       mockChromeService.tabsQuery.and.returnValue(Promise.resolve(mockTabs))
       mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
 
-      // Initialize the component
       await component.ngOnInit()
 
       // Test the current buggy implementation (using getCurrentTab)
@@ -359,10 +318,8 @@ describe('AppComponent', () => {
         },
       }
 
-      // Execute the buggy action
       await component.onClickItem(closeTabsActionBuggy)
 
-      // Verify that getCurrentTab was called
       expect(mockChromeService.getCurrentTab).toHaveBeenCalled()
       expect(mockChromeService.tabsQuery).toHaveBeenCalledWith({
         currentWindow: true,
@@ -446,7 +403,6 @@ describe('AppComponent', () => {
       mockChromeService.tabsQuery.and.returnValue(Promise.resolve(mockTabs))
       mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
 
-      // Initialize the component
       await component.ngOnInit()
 
       // Test the fixed implementation (using getCurrentActiveTab)
@@ -471,10 +427,8 @@ describe('AppComponent', () => {
         },
       }
 
-      // Execute the fixed action
       await component.onClickItem(closeTabsActionFixed)
 
-      // Verify that the correct methods were called
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.tabsQuery).toHaveBeenCalledWith({
         currentWindow: true,
@@ -506,10 +460,8 @@ describe('AppComponent', () => {
       )
       mockChromeService.copyToClipboard.and.returnValue(Promise.resolve())
 
-      // Initialize the component
       await component.ngOnInit()
 
-      // Create a mock browser action that represents the Copy URL action
       const copyUrlAction = {
         name: 'Copy URL',
         action: async () => {
@@ -520,10 +472,8 @@ describe('AppComponent', () => {
         },
       }
 
-      // Execute the action
       await component.onClickItem(copyUrlAction)
 
-      // Verify that the required service methods were called
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.copyToClipboard).toHaveBeenCalledWith(
         'https://example.com',
@@ -552,10 +502,8 @@ describe('AppComponent', () => {
       )
       mockChromeService.copyToClipboard.and.returnValue(Promise.resolve())
 
-      // Initialize the component
       await component.ngOnInit()
 
-      // Create a mock browser action that represents the Copy URL action
       const copyUrlAction = {
         name: 'Copy URL',
         action: async () => {
@@ -566,10 +514,8 @@ describe('AppComponent', () => {
         },
       }
 
-      // Execute the action
       await component.onClickItem(copyUrlAction)
 
-      // Verify that getCurrentActiveTab was called but copyToClipboard was not
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.copyToClipboard).not.toHaveBeenCalled()
     })

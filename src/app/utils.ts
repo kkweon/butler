@@ -4,7 +4,6 @@ export function filterUniqueValues(results: SearchResult[]): SearchResult[] {
   const set = new Set()
   return results.filter((result: SearchResult) => {
     if (set.has(result.url)) {
-      // contains; no need to return
       return false
     }
     set.add(result.url)
