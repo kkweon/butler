@@ -99,7 +99,8 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     const options = await this.chromeSharedOptionsService.getOptions()
 
-    const BROWSER_ACTIONS: BrowserAction[] = [
+    // Define base browser actions that are always available
+    const getBaseBrowserActions = (): BrowserAction[] => [
       {
         name: 'Close other tabs',
         action: async () => {
@@ -157,19 +158,60 @@ export class AppComponent implements OnInit {
       },
     ]
 
+    // Create a function that returns browser actions based on current tab state
+    const getBrowserActions = async (): Promise<BrowserAction[]> => {
+      const baseActions = getBaseBrowserActions()
+
+      try {
+        const activeTab = await this.chromeService.getCurrentActiveTab()
+
+        // Add pin/unpin action at the beginning if we can get tab state
+        const pinAction: BrowserAction = {
+          name: activeTab?.pinned
+            ? 'Unpin the current tab'
+            : 'Pin the current tab',
+          action: async () => {
+            try {
+              const currentTab = await this.chromeService.getCurrentActiveTab()
+              if (currentTab?.id) {
+                await this.chromeService.toggleTabPin(
+                  currentTab.id,
+                  !currentTab.pinned,
+                )
+              }
+            } catch (error) {
+              console.error('Failed to toggle tab pin state:', error)
+            }
+          },
+        }
+
+        return [pinAction, ...baseActions]
+      } catch (error) {
+        console.error('Failed to get current tab state:', error)
+        // Return only base actions if we can't get tab state
+        return baseActions
+      }
+    }
+
     // Create individual observables for each result type
     const actions$ = this.searchInput.valueChanges.pipe(
       startWith(''),
-      map((searchInputText: string) => {
-        if (!searchInputText) {
+      switchMap(async (searchInputText: string) => {
+        try {
+          if (!searchInputText) {
+            return []
+          }
+          const browserActions = await getBrowserActions()
+          return new Fuse<BrowserAction>(browserActions, {
+            isCaseSensitive: false,
+            keys: ['name'],
+          })
+            .search(searchInputText)
+            .map((value) => value.item)
+        } catch (error) {
+          console.error('Failed to get browser actions:', error)
           return []
         }
-        return new Fuse<BrowserAction>(BROWSER_ACTIONS, {
-          isCaseSensitive: false,
-          keys: ['name'],
-        })
-          .search(searchInputText)
-          .map((value) => value.item)
       }),
     )
 

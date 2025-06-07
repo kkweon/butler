@@ -85,6 +85,19 @@ export class ChromeService {
     })
   }
 
+  async tabsUpdate(
+    tabId: number,
+    updateProperties: chrome.tabs.UpdateProperties,
+  ): Promise<chrome.tabs.Tab> {
+    return new Promise((resolve) => {
+      chrome.tabs.update(tabId, updateProperties, (tab) => resolve(tab))
+    })
+  }
+
+  async toggleTabPin(tabId: number, pinned: boolean): Promise<chrome.tabs.Tab> {
+    return this.tabsUpdate(tabId, { pinned })
+  }
+
   async copyToClipboard(text: string): Promise<void> {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {

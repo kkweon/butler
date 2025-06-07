@@ -146,6 +146,54 @@ describe('ChromeService', () => {
       })
     })
 
+    describe('tabsUpdate', () => {
+      it('should resolve with updated tab from chrome.tabs.update', async () => {
+        const mockTab = { id: 1, pinned: true }
+        mockChrome.tabs.update = jasmine
+          .createSpy('update')
+          .and.callFake(
+            (tabId: number, updateProperties: any, callback: any) => {
+              callback(mockTab)
+            },
+          )
+
+        const result = await service.tabsUpdate(1, { pinned: true })
+
+        expect(mockChrome.tabs.update).toHaveBeenCalledWith(
+          1,
+          { pinned: true },
+          jasmine.any(Function),
+        )
+        expect(result).toEqual(mockTab as any)
+      })
+    })
+
+    describe('toggleTabPin', () => {
+      it('should pin a tab when pinned is true', async () => {
+        const mockTab = { id: 1, pinned: true }
+        spyOn(service, 'tabsUpdate').and.returnValue(
+          Promise.resolve(mockTab as any),
+        )
+
+        const result = await service.toggleTabPin(1, true)
+
+        expect(service.tabsUpdate).toHaveBeenCalledWith(1, { pinned: true })
+        expect(result).toEqual(mockTab as any)
+      })
+
+      it('should unpin a tab when pinned is false', async () => {
+        const mockTab = { id: 1, pinned: false }
+        spyOn(service, 'tabsUpdate').and.returnValue(
+          Promise.resolve(mockTab as any),
+        )
+
+        const result = await service.toggleTabPin(1, false)
+
+        expect(service.tabsUpdate).toHaveBeenCalledWith(1, { pinned: false })
+        expect(result).toEqual(mockTab as any)
+      })
+    })
+
     describe('extractDomain', () => {
       it('should extract domain correctly', () => {
         expect((service as any).extractDomain('https://example.com')).toBe(
