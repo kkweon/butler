@@ -13,8 +13,8 @@ const basePlugins = [
 if (process.env.RUN_UPDATE_MANIFEST === 'true') {
   basePlugins.push(
     new WebpackShellPluginNext({
-      onAfterDone: {
-        // This hook runs after each compilation, for both single builds and watch mode rebuilds
+      onBuildExit: {
+        // This hook runs after webpack compilation and after assets are emitted.
         scripts: ['bash scripts/update-manifest.sh'],
         blocking: true, // Ensures webpack waits for the script to finish
         parallel: false,
