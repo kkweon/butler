@@ -26,7 +26,7 @@ Adhere to the following coding conventions:
   - **Modules**:
     - Class names: PascalCase with `Module` suffix (e.g., `SharedComponentsModule`).
     - File names: `module-name.module.ts`.
-  - **Interfaces**: Use PascalCase with an `I` prefix (e.g., `IUser`). (Note: TSLint rules might differ, if Copilot generates code that TSLint flags, prioritize TSLint).
+  - **Interfaces**: Use PascalCase (e.g., `User`). While some conventions use an `I` prefix (e.g., `IUser`), refer to the project's ESLint configuration (`.eslintrc.json`) for the definitive naming rules. If ESLint flags a generated name, prioritize the ESLint rule.
   - **Variables and Functions**: Use camelCase (e.g., `currentUser`, `getUserData`).
   - **SCSS**: Use kebab-case for class names and variables (e.g., `.user-profile`, `$primary-color`).
 - **Styling**:
