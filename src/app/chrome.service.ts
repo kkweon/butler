@@ -124,6 +124,29 @@ export class ChromeService {
     })
   }
 
+  private extractDomain(url: string | undefined): string {
+    if (!url) {
+      return '\uFFFF' // Use high Unicode value for tabs without URL
+    }
+
+    try {
+      const urlObj = new URL(url)
+      const hostname = urlObj.hostname.toLowerCase()
+
+      // Extract main domain by taking the last two parts (domain.tld)
+      // This handles subdomains like www.example.com -> example.com
+      const parts = hostname.split('.')
+      if (parts.length >= 2) {
+        return parts.slice(-2).join('.')
+      }
+
+      return hostname
+    } catch (error) {
+      // If URL parsing fails, use the original URL for sorting
+      return url.toLowerCase()
+    }
+  }
+
   async sortTabsInAllWindows(): Promise<void> {
     try {
       const windows = await this.getAllWindows()
@@ -136,18 +159,29 @@ export class ChromeService {
           const pinnedTabs = tabs.filter((tab) => tab.pinned)
           const unpinnedTabs = tabs.filter((tab) => !tab.pinned)
 
-          // Sort each group by URL (case-insensitive)
+          // Sort each group by domain first, then by full URL (case-insensitive)
           // Handle tabs with no URL by placing them at the end of their group
-          pinnedTabs.sort((a, b) => {
-            const urlA = a.url || '\uFFFF' // Use high Unicode value for tabs without URL
-            const urlB = b.url || '\uFFFF'
-            return urlA.toLowerCase().localeCompare(urlB.toLowerCase())
-          })
-          unpinnedTabs.sort((a, b) => {
+          const sortByDomainThenUrl = (
+            a: chrome.tabs.Tab,
+            b: chrome.tabs.Tab,
+          ) => {
+            const domainA = this.extractDomain(a.url)
+            const domainB = this.extractDomain(b.url)
+
+            // First sort by domain
+            const domainComparison = domainA.localeCompare(domainB)
+            if (domainComparison !== 0) {
+              return domainComparison
+            }
+
+            // If domains are the same, sort by full URL
             const urlA = a.url || '\uFFFF'
             const urlB = b.url || '\uFFFF'
             return urlA.toLowerCase().localeCompare(urlB.toLowerCase())
-          })
+          }
+
+          pinnedTabs.sort(sortByDomainThenUrl)
+          unpinnedTabs.sort(sortByDomainThenUrl)
 
           // Combine: pinned first, then unpinned
           const sortedTabs = [...pinnedTabs, ...unpinnedTabs]
