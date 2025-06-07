@@ -5,7 +5,7 @@
     "outDir": "./out-tsc/app",
     "types": ["chrome"]
   },
-  "files": ["src/main.ts", "src/polyfills.ts"],
+  "files": ["src/main.ts", "src/main.options.ts", "src/polyfills.ts"],
   "include": ["src/**/*.d.ts", "src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts"],
   "angularCompilerOptions": {

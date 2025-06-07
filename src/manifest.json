@@ -21,6 +21,6 @@
     "512": "assets/butler_512.png"
   },
   "options_ui": {
-    "page": "index.html#options"
+    "page": "options.html"
   }
 }
