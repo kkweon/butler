@@ -8,6 +8,7 @@
     "build": "yarn build:butler",
     "build:butler": "ng build butler",
     "build:prod": "yarn build:butler --configuration production",
+    "build-for-work": "yarn build && node scripts/update-manifest.js",
     "test": "ng test --watch=false",
     "lint": "ng lint",
     "e2e": "ng e2e",
