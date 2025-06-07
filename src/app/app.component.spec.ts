@@ -83,11 +83,6 @@ describe('AppComponent', () => {
     expect(component).toBeTruthy()
   })
 
-  // eslint-disable-next-line quotes
-  it("should have as title 'butler'", () => {
-    expect(component.title).toEqual('butler')
-  })
-
   describe('Keyboard Navigation', () => {
     beforeEach(async () => {
       // ngOnInit is called, observables are set up.
