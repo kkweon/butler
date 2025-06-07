@@ -451,15 +451,16 @@ export class AppComponent implements OnInit {
   }
 
   private navigateResults(direction: 'up' | 'down'): void {
-    if (!this.latestResults) {
+    const currentLatestResults = this.latestResults;
+    if (!currentLatestResults) {
         return;
     }
 
     const totalResults =
-        this.latestResults.actions.length +
-        this.latestResults.tabs.length +
-        this.latestResults.bookmarks.length +
-        this.latestResults.history.length;
+        currentLatestResults.actions.length +
+        currentLatestResults.tabs.length +
+        currentLatestResults.bookmarks.length +
+        currentLatestResults.history.length;
 
     if (totalResults === 0) {
       return;
@@ -477,25 +478,25 @@ export class AppComponent implements OnInit {
   }
 
   private selectCurrentResult(): void {
-    if (!this.latestResults) {
+    const currentLatestResults = this.latestResults;
+    if (!currentLatestResults) {
         return;
     }
 
-    const results = this.latestResults;
-    const actionsCount = results.actions.length;
-    const tabsCount = results.tabs.length;
-    const bookmarksCount = results.bookmarks.length;
+    const actionsCount = currentLatestResults.actions.length;
+    const tabsCount = currentLatestResults.tabs.length;
+    const bookmarksCount = currentLatestResults.bookmarks.length;
 
     if (this.selectedIndex < actionsCount) {
       // Select from actions
-      const action = results.actions[this.selectedIndex];
+      const action = currentLatestResults.actions[this.selectedIndex];
       if (action) {
         this.onClickItem(action);
       }
     } else if (this.selectedIndex < actionsCount + tabsCount) {
       // Select from tabs
       const tabIndex = this.selectedIndex - actionsCount;
-      const tab = results.tabs[tabIndex];
+      const tab = currentLatestResults.tabs[tabIndex];
       if (tab) {
         this.onClickItem(tab);
       }
@@ -505,7 +506,7 @@ export class AppComponent implements OnInit {
     ) {
       // Select from bookmarks
       const bookmarkIndex = this.selectedIndex - actionsCount - tabsCount;
-      const bookmark = results.bookmarks[bookmarkIndex];
+      const bookmark = currentLatestResults.bookmarks[bookmarkIndex];
       if (bookmark) {
         this.onClickItem(bookmark);
       }
@@ -513,7 +514,7 @@ export class AppComponent implements OnInit {
       // Select from history
       const historyIndex =
         this.selectedIndex - actionsCount - tabsCount - bookmarksCount;
-      const history = results.history[historyIndex];
+      const history = currentLatestResults.history[historyIndex];
       if (history) {
         this.onClickItem(history);
       }
@@ -523,11 +524,11 @@ export class AppComponent implements OnInit {
   private scrollSelectedItemIntoView(): void {
     // Use setTimeout to ensure DOM has been updated after selectedIndex change
     setTimeout(() => {
-      if (!this.latestResults) {
+      const currentLatestResults = this.latestResults;
+      if (!currentLatestResults) {
           return;
       }
-      const results = this.latestResults;
-      const elementId = this.getActiveDescendantId(results);
+      const elementId = this.getActiveDescendantId(currentLatestResults);
       if (elementId) {
         const element = document.getElementById(elementId);
             if (element) {
