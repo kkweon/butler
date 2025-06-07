@@ -54,6 +54,7 @@ export class AppComponent implements OnInit {
   hasAnyResults$: Observable<boolean>
 
   isSearchingHistory = false
+  private latestResults: CombinedResults | null = null;
   private selectedIndexSubject = new BehaviorSubject<number>(0)
   selectedIndex$ = this.selectedIndexSubject.asObservable()
 
@@ -302,9 +303,10 @@ export class AppComponent implements OnInit {
         bookmarks,
         history,
       })),
-      tap(() => {
+      tap((results) => {
+        this.latestResults = results;
         // Reset selection when results change
-        this.selectedIndex = 0
+        this.selectedIndex = 0;
       }),
       shareReplay(1),
       catchError((error) => {
@@ -389,158 +391,145 @@ export class AppComponent implements OnInit {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    if (!this.allResults$) {
-      // allResults$ might not be initialized yet if a key event occurs very early.
+    // Handle Escape key unconditionally first, as it should always work.
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.searchInput.reset();
+      this.searchInputRef?.nativeElement.focus();
+      return; // Escape action is done.
+    }
+
+    // For other keys, proceed only if we have results data.
+    if (!this.latestResults) {
+      // If latestResults is null (e.g., initial state before any results are processed),
+      // and the key is not Escape, then do nothing.
+      // Default browser action for Tab, Arrows, Enter will occur.
       return;
     }
-    // Subscribe to allResults$ to get the current results state for conditional logic
-    this.allResults$.pipe(take(1)).subscribe(currentResults => {
-      const totalResults =
-        currentResults.actions.length +
-        currentResults.tabs.length +
-        currentResults.bookmarks.length +
-        currentResults.history.length;
 
-      // Allow navigation if totalResults > 0.
-      // Escape is always handled.
-      // The navigateResults and selectCurrentResult methods also have internal guards.
+    const currentResults = this.latestResults;
+    const totalResults =
+      currentResults.actions.length +
+      currentResults.tabs.length +
+      currentResults.bookmarks.length +
+      currentResults.history.length;
 
-      switch (event.key) {
-        case 'ArrowDown':
-          if (totalResults > 0) {
-            event.preventDefault();
-            this.navigateResults('down');
-          }
-          break;
-        case 'Tab':
-          if (totalResults > 0) {
-            event.preventDefault();
-            if (event.shiftKey) {
-              this.navigateResults('up');
-            } else {
-              this.navigateResults('down');
-            }
-          }
-          // If totalResults is 0, Tab performs its default browser action (e.g., focus change).
-          break;
-        case 'ArrowUp':
-          if (totalResults > 0) {
-            event.preventDefault();
-            this.navigateResults('up');
-          }
-          break;
-        case 'Enter':
-          // Prevent default and select only if there are results and selectedIndex is valid.
-          if (totalResults > 0 && this.selectedIndex < totalResults) {
-            event.preventDefault();
-            this.selectCurrentResult();
-          }
-          // If no results or selectedIndex is out of bounds for current results,
-          // Enter might perform default browser action (e.g., if inside a form).
-          break;
-        case 'Escape':
-          event.preventDefault(); // Always handle Escape
-          this.searchInput.reset();
-          this.searchInputRef?.nativeElement.focus();
-          break;
-      }
-    });
-    // take(1) ensures the subscription is automatically unsubscribed.
+    // If there are no results, only Escape is handled (done above).
+    // For other keys, if totalResults is 0, we don't preventDefault or navigate.
+    if (totalResults === 0) {
+        // Tab will do its default action. Arrows/Enter do nothing.
+        return;
+    }
+
+    // At this point, totalResults > 0.
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.navigateResults('down');
+        break;
+      case 'Tab':
+        event.preventDefault(); // Prevent default because we are handling it.
+        if (event.shiftKey) {
+          this.navigateResults('up');
+        } else {
+          this.navigateResults('down');
+        }
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.navigateResults('up');
+        break;
+      case 'Enter':
+        // Prevent default and select only if selectedIndex is valid for the current results.
+        if (this.selectedIndex < totalResults) {
+          event.preventDefault();
+          this.selectCurrentResult();
+        }
+        break;
+      // Escape is handled above.
+    }
   }
 
   private navigateResults(direction: 'up' | 'down'): void {
-    if (!this.allResults$) {
-      return
+    if (!this.latestResults) {
+        return;
     }
 
-    // Get current results to calculate total
-    this.allResults$
-      .pipe(
-        map(
-          (results) =>
-            results.actions.length +
-            results.tabs.length +
-            results.bookmarks.length +
-            results.history.length,
-        ),
-      )
-      .subscribe((totalResults) => {
-        if (totalResults === 0) {
-          return
-        }
+    const totalResults =
+        this.latestResults.actions.length +
+        this.latestResults.tabs.length +
+        this.latestResults.bookmarks.length +
+        this.latestResults.history.length;
 
-        if (direction === 'down') {
-          this.selectedIndex = (this.selectedIndex + 1) % totalResults
-        } else {
-          this.selectedIndex =
-            this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1
-        }
+    if (totalResults === 0) {
+      return;
+    }
 
-        // Scroll selected item into view
-        this.scrollSelectedItemIntoView()
-      })
-      .unsubscribe()
+    if (direction === 'down') {
+      this.selectedIndex = (this.selectedIndex + 1) % totalResults;
+    } else {
+      this.selectedIndex =
+        this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1;
+    }
+
+    // Scroll selected item into view
+    this.scrollSelectedItemIntoView();
   }
 
   private selectCurrentResult(): void {
-    if (!this.allResults$) {
-      return
+    if (!this.latestResults) {
+        return;
     }
 
-    this.allResults$
-      .subscribe((results) => {
-        const actionsCount = results.actions.length
-        const tabsCount = results.tabs.length
-        const bookmarksCount = results.bookmarks.length
+    const results = this.latestResults;
+    const actionsCount = results.actions.length;
+    const tabsCount = results.tabs.length;
+    const bookmarksCount = results.bookmarks.length;
 
-        if (this.selectedIndex < actionsCount) {
-          // Select from actions
-          const action = results.actions[this.selectedIndex]
-          if (action) {
-            this.onClickItem(action)
-          }
-        } else if (this.selectedIndex < actionsCount + tabsCount) {
-          // Select from tabs
-          const tabIndex = this.selectedIndex - actionsCount
-          const tab = results.tabs[tabIndex]
-          if (tab) {
-            this.onClickItem(tab)
-          }
-        } else if (
-          this.selectedIndex <
-          actionsCount + tabsCount + bookmarksCount
-        ) {
-          // Select from bookmarks
-          const bookmarkIndex = this.selectedIndex - actionsCount - tabsCount
-          const bookmark = results.bookmarks[bookmarkIndex]
-          if (bookmark) {
-            this.onClickItem(bookmark)
-          }
-        } else {
-          // Select from history
-          const historyIndex =
-            this.selectedIndex - actionsCount - tabsCount - bookmarksCount
-          const history = results.history[historyIndex]
-          if (history) {
-            this.onClickItem(history)
-          }
-        }
-      })
-      .unsubscribe()
+    if (this.selectedIndex < actionsCount) {
+      // Select from actions
+      const action = results.actions[this.selectedIndex];
+      if (action) {
+        this.onClickItem(action);
+      }
+    } else if (this.selectedIndex < actionsCount + tabsCount) {
+      // Select from tabs
+      const tabIndex = this.selectedIndex - actionsCount;
+      const tab = results.tabs[tabIndex];
+      if (tab) {
+        this.onClickItem(tab);
+      }
+    } else if (
+      this.selectedIndex <
+      actionsCount + tabsCount + bookmarksCount
+    ) {
+      // Select from bookmarks
+      const bookmarkIndex = this.selectedIndex - actionsCount - tabsCount;
+      const bookmark = results.bookmarks[bookmarkIndex];
+      if (bookmark) {
+        this.onClickItem(bookmark);
+      }
+    } else {
+      // Select from history
+      const historyIndex =
+        this.selectedIndex - actionsCount - tabsCount - bookmarksCount;
+      const history = results.history[historyIndex];
+      if (history) {
+        this.onClickItem(history);
+      }
+    }
   }
 
   private scrollSelectedItemIntoView(): void {
     // Use setTimeout to ensure DOM has been updated after selectedIndex change
     setTimeout(() => {
-      if (!this.allResults$) {
-        return
+      if (!this.latestResults) {
+          return;
       }
-
-      this.allResults$
-        .subscribe((results) => {
-          const elementId = this.getActiveDescendantId(results)
-          if (elementId) {
-            const element = document.getElementById(elementId)
+      const results = this.latestResults;
+      const elementId = this.getActiveDescendantId(results);
+      if (elementId) {
+        const element = document.getElementById(elementId);
             if (element) {
               element.scrollIntoView({
                 behavior: 'smooth',
@@ -549,8 +538,6 @@ export class AppComponent implements OnInit {
               })
             }
           }
-        })
-        .unsubscribe()
     }, 0)
   }
 
