@@ -141,7 +141,7 @@ export class AppComponent implements OnInit {
         },
       },
       {
-        name: 'Sort tabs by URL',
+        name: 'Sort tabs by domain',
         action: async () => {
           await this.chromeService.sortTabsInAllWindows()
         },

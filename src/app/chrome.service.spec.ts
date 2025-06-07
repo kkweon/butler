@@ -146,6 +146,27 @@ describe('ChromeService', () => {
       })
     })
 
+    describe('extractDomain', () => {
+      it('should extract domain correctly', () => {
+        expect((service as any).extractDomain('https://example.com')).toBe(
+          'example.com',
+        )
+        expect((service as any).extractDomain('https://www.example.com')).toBe(
+          'www.example.com',
+        )
+        expect((service as any).extractDomain('https://sub.example.com')).toBe(
+          'sub.example.com',
+        )
+        expect((service as any).extractDomain('http://example.com')).toBe(
+          'example.com',
+        )
+        expect((service as any).extractDomain(undefined)).toBe('\uFFFF')
+        expect((service as any).extractDomain('invalid-url')).toBe(
+          'invalid-url',
+        )
+      })
+    })
+
     describe('sortTabsInAllWindows', () => {
       beforeEach(() => {
         spyOn(service, 'getAllWindows')
@@ -153,7 +174,7 @@ describe('ChromeService', () => {
         spyOn(service, 'tabsMove')
       })
 
-      it('should sort tabs by URL in each window', async () => {
+      it('should sort tabs by domain in each window', async () => {
         const mockWindows = [{ id: 1 }]
         const mockTabs = [
           { id: 1, url: 'https://z.com', pinned: false, index: 0 },
@@ -174,6 +195,110 @@ describe('ChromeService', () => {
         expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 0 }) // a.com to position 0
         expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 1 }) // m.com to position 1
         expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 2 }) // z.com to position 2
+      })
+
+      it('should group same domain tabs together and sort by full URL within domain', async () => {
+        const mockWindows = [{ id: 1 }]
+        const mockTabs = [
+          { id: 1, url: 'https://example.com/z', pinned: false, index: 0 },
+          { id: 2, url: 'https://another.com/page', pinned: false, index: 1 },
+          { id: 3, url: 'https://example.com/a', pinned: false, index: 2 },
+          { id: 4, url: 'https://example.com/m', pinned: false, index: 3 },
+        ]
+
+        ;(service.getAllWindows as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockWindows),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockTabs),
+        )
+        ;(service.tabsMove as jasmine.Spy).and.returnValue(Promise.resolve({}))
+
+        await service.sortTabsInAllWindows()
+
+        // another.com should come first (alphabetically)
+        expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 0 }) // another.com/page to position 0
+        // example.com tabs should be grouped together and sorted by full URL
+        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 1 }) // example.com/a to position 1
+        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // example.com/m to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 3 }) // example.com/z to position 3
+      })
+
+      it('should handle subdomains correctly by grouping them with main domain', async () => {
+        const mockWindows = [{ id: 1 }]
+        const mockTabs = [
+          { id: 1, url: 'https://z.example.com', pinned: false, index: 0 },
+          { id: 2, url: 'https://other.com', pinned: false, index: 1 },
+          { id: 3, url: 'https://a.example.com', pinned: false, index: 2 },
+          { id: 4, url: 'https://www.example.com', pinned: false, index: 3 },
+        ]
+
+        ;(service.getAllWindows as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockWindows),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockTabs),
+        )
+        ;(service.tabsMove as jasmine.Spy).and.returnValue(Promise.resolve({}))
+
+        await service.sortTabsInAllWindows()
+
+        // Domains should be sorted: a.example.com, other.com, www.example.com, z.example.com
+        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 0 }) // a.example.com to position 0
+        // other.com (id:2) is already at index 1, so no move needed
+        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // www.example.com to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 3 }) // z.example.com to position 3
+      })
+
+      it('should handle different protocols (http vs https) correctly', async () => {
+        const mockWindows = [{ id: 1 }]
+        const mockTabs = [
+          { id: 1, url: 'https://example.com/page1', pinned: false, index: 0 },
+          { id: 2, url: 'http://example.com/page2', pinned: false, index: 1 },
+          { id: 3, url: 'https://another.com', pinned: false, index: 2 },
+        ]
+
+        ;(service.getAllWindows as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockWindows),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockTabs),
+        )
+        ;(service.tabsMove as jasmine.Spy).and.returnValue(Promise.resolve({}))
+
+        await service.sortTabsInAllWindows()
+
+        // Should group by domain regardless of protocol
+        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 0 }) // another.com to position 0
+        // example.com tabs should be grouped and sorted by full URL
+        // http://example.com/page2 is already at index 1 so no move call for it
+        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 2 }) // https://example.com/page1 to position 2
+        // Verify only 2 move calls were made (not 3)
+        expect(service.tabsMove).toHaveBeenCalledTimes(2)
+      })
+
+      it('should handle malformed URLs gracefully', async () => {
+        const mockWindows = [{ id: 1 }]
+        const mockTabs = [
+          { id: 1, url: 'https://valid.com', pinned: false, index: 0 },
+          { id: 2, url: 'not-a-valid-url', pinned: false, index: 1 },
+          { id: 3, url: 'https://another.com', pinned: false, index: 2 },
+        ]
+
+        ;(service.getAllWindows as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockWindows),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockTabs),
+        )
+        ;(service.tabsMove as jasmine.Spy).and.returnValue(Promise.resolve({}))
+
+        await service.sortTabsInAllWindows()
+
+        // Valid domains should be sorted first, malformed URLs should use lexical sorting
+        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 0 }) // another.com to position 0
+        // not-a-valid-url (id:2) is already at index 1, so no move needed
+        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 2 }) // valid.com to position 2
       })
 
       it('should keep pinned tabs before unpinned tabs', async () => {
