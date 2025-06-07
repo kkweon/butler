@@ -88,20 +88,44 @@ describe('AppComponent', () => {
       // ngOnInit is called, observables are set up.
       // We need to ensure `latestResults` has a known state for these tests.
       // Set searchInput to a value that would typically produce results.
-      component.searchInput.setValue('test'); 
-      
+      component.searchInput.setValue('test')
+
       // Directly mock `latestResults` for predictable keyboard navigation tests.
       component['latestResults'] = {
-        actions: [{ name: 'Action 1', action: async () => {} }, { name: 'Action 2', action: async () => {} }], // 2 actions
-        tabs: [{ name: 'Tab 1', url: 'http://tab1.com', faviconUrl: '', tab: {} as any }], // 1 tab
-        bookmarks: [{ name: 'Bookmark 1', url: 'http://bookmark1.com', faviconUrl: '', bookmark: {} as any }], // 1 bookmark
-        history: [{ name: 'History 1', url: 'http://history1.com', faviconUrl: '', history: {} as any }] // 1 history item
-      };
+        actions: [
+          { name: 'Action 1', action: async () => {} },
+          { name: 'Action 2', action: async () => {} },
+        ], // 2 actions
+        tabs: [
+          {
+            name: 'Tab 1',
+            url: 'http://tab1.com',
+            faviconUrl: '',
+            tab: {} as any,
+          },
+        ], // 1 tab
+        bookmarks: [
+          {
+            name: 'Bookmark 1',
+            url: 'http://bookmark1.com',
+            faviconUrl: '',
+            bookmark: {} as any,
+          },
+        ], // 1 bookmark
+        history: [
+          {
+            name: 'History 1',
+            url: 'http://history1.com',
+            faviconUrl: '',
+            history: {} as any,
+          },
+        ], // 1 history item
+      }
       // Total results: 2 + 1 + 1 + 1 = 5
 
-      fixture.detectChanges();
-      await fixture.whenStable();
-    });
+      fixture.detectChanges()
+      await fixture.whenStable()
+    })
 
     it('should handle ArrowDown key to navigate results', () => {
       spyOn(component as any, 'navigateResults')
@@ -171,63 +195,68 @@ describe('AppComponent', () => {
 
     it('should not handle navigation/selection keys (except Escape) when there are no results', () => {
       // Ensure search input might have a value, but results are empty
-      component.searchInput.setValue('querythatyieldsnoresults');
-      component['latestResults'] = { actions: [], tabs: [], bookmarks: [], history: [] }; // Force no results
-      fixture.detectChanges();
+      component.searchInput.setValue('querythatyieldsnoresults')
+      component['latestResults'] = {
+        actions: [],
+        tabs: [],
+        bookmarks: [],
+        history: [],
+      } // Force no results
+      fixture.detectChanges()
 
       // Spy on navigation methods
-      spyOn(component as any, 'navigateResults');
-      spyOn(component as any, 'selectCurrentResult');
+      spyOn(component as any, 'navigateResults')
+      spyOn(component as any, 'selectCurrentResult')
 
-      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
-      spyOn(event, 'preventDefault');
-      component.onKeyDown(event);
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
+      spyOn(event, 'preventDefault')
+      component.onKeyDown(event)
 
       // ArrowDown should not be prevented, and navigation should not occur if no results
-      expect(event.preventDefault).not.toHaveBeenCalled();
-      expect((component as any).navigateResults).not.toHaveBeenCalled();
-      expect((component as any).selectCurrentResult).not.toHaveBeenCalled(); // Also check select
-    });
+      expect(event.preventDefault).not.toHaveBeenCalled()
+      expect((component as any).navigateResults).not.toHaveBeenCalled()
+      expect((component as any).selectCurrentResult).not.toHaveBeenCalled() // Also check select
+    })
 
     it('should correctly navigate down through results', () => {
       // latestResults is set in beforeEach to have 5 items.
       // actions: 2, tabs: 1, bookmarks: 1, history: 1
       // Indices: 0, 1 (actions), 2 (tabs), 3 (bookmarks), 4 (history)
-      
-      component.selectedIndex = 0;
-      (component as any).navigateResults('down');
-      expect(component.selectedIndex).toBe(1); // Moves from Action 1 to Action 2
 
-      component.selectedIndex = 1;
-      (component as any).navigateResults('down');
-      expect(component.selectedIndex).toBe(2); // Moves from Action 2 to Tab 1
+      component.selectedIndex = 0
+      ;(component as any).navigateResults('down')
+      expect(component.selectedIndex).toBe(1) // Moves from Action 1 to Action 2
 
-      component.selectedIndex = 4; // Last item (index 4)
-      (component as any).navigateResults('down');
-      expect(component.selectedIndex).toBe(0); // Wraps to first item
-    });
+      component.selectedIndex = 1
+      ;(component as any).navigateResults('down')
+      expect(component.selectedIndex).toBe(2) // Moves from Action 2 to Tab 1
+
+      component.selectedIndex = 4 // Last item (index 4)
+      ;(component as any).navigateResults('down')
+      expect(component.selectedIndex).toBe(0) // Wraps to first item
+    })
 
     it('should wrap around when navigating down from last result', () => {
       // latestResults is set in beforeEach to have 5 items.
       // Indices: 0, 1 (actions), 2 (tabs), 3 (bookmarks), 4 (history)
-      component.selectedIndex = 4; // Last result (index 4 out of 0-4)
-      (component as any).navigateResults('down');
-      expect(component.selectedIndex).toBe(0); // Should wrap to first
-    });
+      component.selectedIndex = 4 // Last result (index 4 out of 0-4)
+      ;(component as any).navigateResults('down')
+      expect(component.selectedIndex).toBe(0) // Should wrap to first
+    })
 
     it('should correctly navigate up through results', () => {
       // latestResults is set in beforeEach to have 5 items.
-      component.selectedIndex = 1;
-      (component as any).navigateResults('up');
-      expect(component.selectedIndex).toBe(0);
-    });
+      component.selectedIndex = 1
+      ;(component as any).navigateResults('up')
+      expect(component.selectedIndex).toBe(0)
+    })
 
     it('should wrap around when navigating up from first result', () => {
       // latestResults is set in beforeEach to have 5 items.
-      component.selectedIndex = 0;
-      (component as any).navigateResults('up');
-      expect(component.selectedIndex).toBe(4); // Should wrap to last (index 4 for 5 items)
-    });
+      component.selectedIndex = 0
+      ;(component as any).navigateResults('up')
+      expect(component.selectedIndex).toBe(4) // Should wrap to last (index 4 for 5 items)
+    })
   })
 
   describe('Browser Actions', () => {

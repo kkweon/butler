@@ -53,7 +53,7 @@ export class AppComponent implements OnInit {
   hasAnyResults$: Observable<boolean>
 
   isSearchingHistory = false
-  private latestResults: CombinedResults | null = null;
+  private latestResults: CombinedResults | null = null
   private selectedIndexSubject = new BehaviorSubject<number>(0)
   selectedIndex$ = this.selectedIndexSubject.asObservable()
 
@@ -303,9 +303,9 @@ export class AppComponent implements OnInit {
         history,
       })),
       tap((results) => {
-        this.latestResults = results;
+        this.latestResults = results
         // Reset selection when results change
-        this.selectedIndex = 0;
+        this.selectedIndex = 0
       }),
       shareReplay(1),
       catchError((error) => {
@@ -392,10 +392,10 @@ export class AppComponent implements OnInit {
   onKeyDown(event: KeyboardEvent): void {
     // Handle Escape key unconditionally first, as it should always work.
     if (event.key === 'Escape') {
-      event.preventDefault();
-      this.searchInput.reset();
-      this.searchInputRef?.nativeElement.focus();
-      return; // Escape action is done.
+      event.preventDefault()
+      this.searchInput.reset()
+      this.searchInputRef?.nativeElement.focus()
+      return // Escape action is done.
     }
 
     // For other keys, proceed only if we have results data.
@@ -403,118 +403,115 @@ export class AppComponent implements OnInit {
       // If latestResults is null (e.g., initial state before any results are processed),
       // and the key is not Escape, then do nothing.
       // Default browser action for Tab, Arrows, Enter will occur.
-      return;
+      return
     }
 
-    const currentResults = this.latestResults;
+    const currentResults = this.latestResults
     const totalResults =
       currentResults.actions.length +
       currentResults.tabs.length +
       currentResults.bookmarks.length +
-      currentResults.history.length;
+      currentResults.history.length
 
     // If there are no results, only Escape is handled (done above).
     // For other keys, if totalResults is 0, we don't preventDefault or navigate.
     if (totalResults === 0) {
-        // Tab will do its default action. Arrows/Enter do nothing.
-        return;
+      // Tab will do its default action. Arrows/Enter do nothing.
+      return
     }
 
     // At this point, totalResults > 0.
     switch (event.key) {
       case 'ArrowDown':
-        event.preventDefault();
-        this.navigateResults('down');
-        break;
+        event.preventDefault()
+        this.navigateResults('down')
+        break
       case 'Tab':
-        event.preventDefault(); // Prevent default because we are handling it.
+        event.preventDefault() // Prevent default because we are handling it.
         if (event.shiftKey) {
-          this.navigateResults('up');
+          this.navigateResults('up')
         } else {
-          this.navigateResults('down');
+          this.navigateResults('down')
         }
-        break;
+        break
       case 'ArrowUp':
-        event.preventDefault();
-        this.navigateResults('up');
-        break;
+        event.preventDefault()
+        this.navigateResults('up')
+        break
       case 'Enter':
         // Prevent default and select only if selectedIndex is valid for the current results.
         if (this.selectedIndex < totalResults) {
-          event.preventDefault();
-          this.selectCurrentResult();
+          event.preventDefault()
+          this.selectCurrentResult()
         }
-        break;
+        break
     }
   }
 
   private navigateResults(direction: 'up' | 'down'): void {
-    const currentLatestResults = this.latestResults;
+    const currentLatestResults = this.latestResults
     if (!currentLatestResults) {
-        return;
+      return
     }
 
     const totalResults =
-        currentLatestResults.actions.length +
-        currentLatestResults.tabs.length +
-        currentLatestResults.bookmarks.length +
-        currentLatestResults.history.length;
+      currentLatestResults.actions.length +
+      currentLatestResults.tabs.length +
+      currentLatestResults.bookmarks.length +
+      currentLatestResults.history.length
 
     if (totalResults === 0) {
-      return;
+      return
     }
 
     if (direction === 'down') {
-      this.selectedIndex = (this.selectedIndex + 1) % totalResults;
+      this.selectedIndex = (this.selectedIndex + 1) % totalResults
     } else {
       this.selectedIndex =
-        this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1;
+        this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1
     }
 
     // Scroll selected item into view
-    this.scrollSelectedItemIntoView();
+    this.scrollSelectedItemIntoView()
   }
 
   private selectCurrentResult(): void {
-    const currentLatestResults = this.latestResults;
+    const currentLatestResults = this.latestResults
     if (!currentLatestResults) {
-        return;
+      return
     }
 
-    const actionsCount = currentLatestResults.actions.length;
-    const tabsCount = currentLatestResults.tabs.length;
-    const bookmarksCount = currentLatestResults.bookmarks.length;
+    const actionsCount = currentLatestResults.actions.length
+    const tabsCount = currentLatestResults.tabs.length
+    const bookmarksCount = currentLatestResults.bookmarks.length
 
     if (this.selectedIndex < actionsCount) {
       // Select from actions
-      const action = currentLatestResults.actions[this.selectedIndex];
+      const action = currentLatestResults.actions[this.selectedIndex]
       if (action) {
-        this.onClickItem(action);
+        this.onClickItem(action)
       }
     } else if (this.selectedIndex < actionsCount + tabsCount) {
       // Select from tabs
-      const tabIndex = this.selectedIndex - actionsCount;
-      const tab = currentLatestResults.tabs[tabIndex];
+      const tabIndex = this.selectedIndex - actionsCount
+      const tab = currentLatestResults.tabs[tabIndex]
       if (tab) {
-        this.onClickItem(tab);
+        this.onClickItem(tab)
       }
-    } else if (
-      this.selectedIndex <
-      actionsCount + tabsCount + bookmarksCount
-    ) {
+    } else if (this.selectedIndex < actionsCount + tabsCount + bookmarksCount) {
       // Select from bookmarks
-      const bookmarkIndex = this.selectedIndex - actionsCount - tabsCount;
-      const bookmark = currentLatestResults.bookmarks[bookmarkIndex];
+      const bookmarkIndex = this.selectedIndex - actionsCount - tabsCount
+      const bookmark = currentLatestResults.bookmarks[bookmarkIndex]
       if (bookmark) {
-        this.onClickItem(bookmark);
+        this.onClickItem(bookmark)
       }
     } else {
       // Select from history
       const historyIndex =
-        this.selectedIndex - actionsCount - tabsCount - bookmarksCount;
-      const history = currentLatestResults.history[historyIndex];
+        this.selectedIndex - actionsCount - tabsCount - bookmarksCount
+      const history = currentLatestResults.history[historyIndex]
       if (history) {
-        this.onClickItem(history);
+        this.onClickItem(history)
       }
     }
   }
@@ -522,21 +519,21 @@ export class AppComponent implements OnInit {
   private scrollSelectedItemIntoView(): void {
     // Use setTimeout to ensure DOM has been updated after selectedIndex change
     setTimeout(() => {
-      const currentLatestResults = this.latestResults;
+      const currentLatestResults = this.latestResults
       if (!currentLatestResults) {
-          return;
+        return
       }
-      const elementId = this.getActiveDescendantId(currentLatestResults);
+      const elementId = this.getActiveDescendantId(currentLatestResults)
       if (elementId) {
-        const element = document.getElementById(elementId);
-            if (element) {
-              element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'nearest',
-              })
-            }
-          }
+        const element = document.getElementById(elementId)
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest',
+          })
+        }
+      }
     }, 0)
   }
 
