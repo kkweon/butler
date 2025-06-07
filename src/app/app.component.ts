@@ -202,10 +202,11 @@ export class AppComponent implements OnInit {
       startWith(''),
       switchMap(async (searchInputText: string) => {
         try {
+          const browserActions = await getBrowserActions() // Get actions first
           if (!searchInputText) {
-            return []
+            return browserActions // Return all actions if input is empty
           }
-          const browserActions = await getBrowserActions()
+          // If input is not empty, then search
           return new Fuse<BrowserAction>(browserActions, {
             isCaseSensitive: false,
             keys: ['name'],
@@ -221,12 +222,13 @@ export class AppComponent implements OnInit {
 
     const tabs$ = this.searchInput.valueChanges.pipe(
       startWith(''),
-      switchMap((searchInputText) => {
-        if (!searchInputText || !options.includesTabs) {
+      switchMap((searchInputText: string) => {
+        if (!options.includesTabs) {
           return []
         }
         return this.chromeService.tabsQuery({}).then((tabs) => {
-          const filteredTabs = new Fuse<Tab>(tabs, {
+          // Fuse search; if searchInputText is empty, Fuse returns all items.
+          const fuse = new Fuse<Tab>(tabs, {
             keys: ['title', 'url'],
             isCaseSensitive: false,
           }).search(searchInputText)
@@ -243,8 +245,8 @@ export class AppComponent implements OnInit {
 
     const history$ = this.searchInput.valueChanges.pipe(
       startWith(''),
-      switchMap((searchInputText) => {
-        if (!searchInputText || !options.includesHistory) {
+      switchMap((searchInputText: string) => {
+        if (!options.includesHistory) {
           return []
         }
 
@@ -272,17 +274,17 @@ export class AppComponent implements OnInit {
 
     const bookmarks$ = this.searchInput.valueChanges.pipe(
       startWith(''),
-      switchMap((searchInputText) => {
-        if (!searchInputText || !options.includesBookmarks) {
+      switchMap((searchInputText: string) => {
+        if (!options.includesBookmarks) {
           return []
         }
         return this.chromeService
-          .bookmarksSearch(searchInputText)
+          .bookmarksSearch(searchInputText) // API handles empty searchInputText
           .then((bookmarks) => {
             // Filter out bookmark folders (they don't have URLs)
             const bookmarkItems = bookmarks.filter((bookmark) => bookmark.url)
 
-            // Use Fuse.js for fuzzy search
+            // Use Fuse.js for fuzzy search. If searchInputText is "", Fuse returns all items.
             const fuse = new Fuse<BookmarkTreeNode>(bookmarkItems, {
               keys: ['title', 'url'],
               isCaseSensitive: false,
