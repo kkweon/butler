@@ -1,9 +1,16 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const WebpackShellPluginNext = require('webpack-shell-plugin-next')
-// const CopyWebpackPlugin = require('copy-webpack-plugin') // Removed
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 const basePlugins = [
-  // CopyWebpackPlugin removed from here
+  new CopyWebpackPlugin({
+    patterns: [
+      {
+        from: 'src/manifest.json',
+        to: 'manifest.json', // Output path is relative to webpack's output.path (dist/butler)
+      },
+    ],
+  }),
   new HtmlWebpackPlugin({
     filename: 'options.html',
     template: './src/options.html',
