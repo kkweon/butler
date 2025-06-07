@@ -87,7 +87,7 @@ yarn install
 # Start development server (for testing components)
 yarn start
 
-# Build all projects
+# Build the project
 yarn build
 
 # Build for production
