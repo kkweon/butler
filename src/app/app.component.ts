@@ -7,8 +7,15 @@ import {
 } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
-import { Observable, combineLatest, BehaviorSubject } from 'rxjs'
-import { map, switchMap, tap, startWith, shareReplay } from 'rxjs/operators'
+import { Observable, combineLatest, BehaviorSubject, of } from 'rxjs'
+import {
+  map,
+  switchMap,
+  tap,
+  startWith,
+  shareReplay,
+  catchError,
+} from 'rxjs/operators'
 import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
@@ -224,23 +231,29 @@ export class AppComponent implements OnInit {
       startWith(''),
       switchMap((searchInputText: string) => {
         if (!options.includesTabs) {
-          return []
+          return of([]) // Return an observable of empty array
         }
-        return this.chromeService.tabsQuery({}).then((tabs) => {
-          // Fuse search; if searchInputText is empty, Fuse returns all items.
-          const fuse = new Fuse<Tab>(tabs, {
-            keys: ['title', 'url'],
-            isCaseSensitive: false,
-          })
-          const searchResults = fuse.search(searchInputText)
+        return this.chromeService
+          .tabsQuery({})
+          .then((tabs) => {
+            // Fuse search; if searchInputText is empty, Fuse returns all items.
+            const fuse = new Fuse<Tab>(tabs, {
+              keys: ['title', 'url'],
+              isCaseSensitive: false,
+            })
+            const searchResults = fuse.search(searchInputText)
 
-          return searchResults.map(({ item: tab }) => ({
-            faviconUrl: tab.favIconUrl,
-            name: tab.title,
-            url: tab.url,
-            tab,
-          }))
-        })
+            return searchResults.map(({ item: tab }) => ({
+              faviconUrl: tab.favIconUrl,
+              name: tab.title,
+              url: tab.url,
+              tab,
+            }))
+          })
+          .catch((error) => {
+            console.error('Error fetching or searching tabs:', error)
+            return [] // Return empty array on error inside the promise
+          })
       }),
     )
 
@@ -248,7 +261,7 @@ export class AppComponent implements OnInit {
       startWith(''),
       switchMap((searchInputText: string) => {
         if (!options.includesHistory) {
-          return []
+          return of([]) // Return an observable of empty array
         }
 
         this.isSearchingHistory = true
@@ -265,11 +278,16 @@ export class AppComponent implements OnInit {
               history: result,
             }))
           })
+          .catch((error) => {
+            console.error('Error fetching or searching history:', error)
+            // this.isSearchingHistory will be set to false by the subsequent tap operator
+            return [] // Return empty array on error inside the promise
+          })
       }),
       // there could be many duplicate for history. Hence, remove the duplicates.
       map((results) => filterUniqueValues(results)),
       tap(() => {
-        this.isSearchingHistory = false
+        this.isSearchingHistory = false // This ensures the flag is reset
       }),
     )
 
@@ -277,7 +295,7 @@ export class AppComponent implements OnInit {
       startWith(''),
       switchMap((searchInputText: string) => {
         if (!options.includesBookmarks) {
-          return []
+          return of([]) // Return an observable of empty array
         }
         return this.chromeService
           .bookmarksSearch(searchInputText) // API handles empty searchInputText
@@ -297,6 +315,10 @@ export class AppComponent implements OnInit {
               url: bookmark.url,
               bookmark,
             }))
+          })
+          .catch((error) => {
+            console.error('Error fetching or searching bookmarks:', error)
+            return [] // Return empty array on error inside the promise
           })
       }),
     )
@@ -319,6 +341,11 @@ export class AppComponent implements OnInit {
         this.selectedIndex = 0
       }),
       shareReplay(1),
+      catchError((error) => {
+        console.error('Error in combined results stream:', error)
+        // Fallback to an empty structure for all result types
+        return of({ actions: [], tabs: [], bookmarks: [], history: [] })
+      }),
     )
 
     // Create individual observables for template use
@@ -396,9 +423,9 @@ export class AppComponent implements OnInit {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    if (!this.searchInput.value || this.searchInput.value.length === 0) {
-      return
-    }
+    // Allow navigation and Escape key even if searchInput is empty.
+    // The navigateResults and selectCurrentResult methods have their own guards
+    // based on the actual number of results.
 
     switch (event.key) {
       case 'ArrowDown':
