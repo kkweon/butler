@@ -7,55 +7,25 @@ import {
 } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
-import { Observable, combineLatest, BehaviorSubject } from 'rxjs'
-import { map, switchMap, tap, startWith, shareReplay } from 'rxjs/operators'
+import { Observable, combineLatest, BehaviorSubject, of } from 'rxjs'
+import {
+  map,
+  switchMap,
+  tap,
+  startWith,
+  shareReplay,
+  catchError,
+  take,
+} from 'rxjs/operators'
 import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
+import { BrowserAction, SearchResult, CombinedResults } from './models'
+import { filterUniqueValues, isBrowserAction } from './utils'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
-
-interface BrowserAction {
-  name: string
-  action: () => Promise<void>
-}
-
-interface SearchResult {
-  name: string
-  url: string
-  faviconUrl: string
-
-  tab?: Tab
-  history?: HistoryItem
-  bookmark?: BookmarkTreeNode
-}
-
-interface CombinedResults {
-  actions: BrowserAction[]
-  tabs: SearchResult[]
-  bookmarks: SearchResult[]
-  history: SearchResult[]
-}
-
-function filterUniqueValues(results: SearchResult[]): SearchResult[] {
-  const set = new Set()
-  return results.filter((result: SearchResult) => {
-    if (set.has(result.url)) {
-      // contains; no need to return
-      return false
-    }
-    set.add(result.url)
-    return true
-  })
-}
-
-function isBrowserAction(
-  result: SearchResult | BrowserAction,
-): result is BrowserAction {
-  return (result as BrowserAction).action !== undefined
-}
 
 @Component({
   selector: 'app-root',
@@ -65,7 +35,6 @@ function isBrowserAction(
   imports: [CommonModule, ReactiveFormsModule, MatIconModule],
 })
 export class AppComponent implements OnInit {
-  title = 'butler'
   searchInput: UntypedFormControl = new UntypedFormControl()
 
   @ViewChild('searchInputRef') searchInputRef: ElementRef<HTMLInputElement>
@@ -84,6 +53,7 @@ export class AppComponent implements OnInit {
   hasAnyResults$: Observable<boolean>
 
   isSearchingHistory = false
+  private latestResults: CombinedResults | null = null
   private selectedIndexSubject = new BehaviorSubject<number>(0)
   selectedIndex$ = this.selectedIndexSubject.asObservable()
 
@@ -202,10 +172,11 @@ export class AppComponent implements OnInit {
       startWith(''),
       switchMap(async (searchInputText: string) => {
         try {
+          const browserActions = await getBrowserActions() // Get actions first
           if (!searchInputText) {
-            return []
+            return browserActions // Return all actions if input is empty
           }
-          const browserActions = await getBrowserActions()
+          // If input is not empty, then search
           return new Fuse<BrowserAction>(browserActions, {
             isCaseSensitive: false,
             keys: ['name'],
@@ -221,37 +192,45 @@ export class AppComponent implements OnInit {
 
     const tabs$ = this.searchInput.valueChanges.pipe(
       startWith(''),
-      switchMap((searchInputText) => {
-        if (!searchInputText || !options.includesTabs) {
-          return []
+      switchMap((searchInputText: string) => {
+        if (!options.includesTabs) {
+          return of([]) // Return an observable of empty array
         }
-        return this.chromeService.tabsQuery({}).then((tabs) => {
-          const filteredTabs = new Fuse<Tab>(tabs, {
-            keys: ['title', 'url'],
-            isCaseSensitive: false,
-          }).search(searchInputText)
+        return this.chromeService
+          .tabsQuery({})
+          .then((tabs) => {
+            // Fuse search; if searchInputText is empty, Fuse returns all items.
+            const fuse = new Fuse<Tab>(tabs, {
+              keys: ['title', 'url'],
+              isCaseSensitive: false,
+            })
+            const searchResults = fuse.search(searchInputText || '') // Ensure text is not null
 
-          return filteredTabs.map(({ item: tab }) => ({
-            faviconUrl: tab.favIconUrl,
-            name: tab.title,
-            url: tab.url,
-            tab,
-          }))
-        })
+            return searchResults.map(({ item: tab }) => ({
+              faviconUrl: tab.favIconUrl,
+              name: tab.title,
+              url: tab.url,
+              tab,
+            }))
+          })
+          .catch((error) => {
+            console.error('Error fetching or searching tabs:', error)
+            return [] // Return empty array on error inside the promise
+          })
       }),
     )
 
     const history$ = this.searchInput.valueChanges.pipe(
       startWith(''),
-      switchMap((searchInputText) => {
-        if (!searchInputText || !options.includesHistory) {
-          return []
+      switchMap((searchInputText: string) => {
+        if (!options.includesHistory) {
+          return of([]) // Return an observable of empty array
         }
 
         this.isSearchingHistory = true
         return this.chromeService
           .historySearch({
-            text: searchInputText,
+            text: searchInputText || '', // Ensure text is not null
             startTime: options.searchHistoryStartDateInUnixEpoch,
           })
           .then((histories) => {
@@ -262,38 +241,50 @@ export class AppComponent implements OnInit {
               history: result,
             }))
           })
+          .catch((error) => {
+            console.error('Error fetching or searching history:', error)
+            // this.isSearchingHistory will be set to false by the subsequent tap operator
+            return [] // Return empty array on error inside the promise
+          })
       }),
       // there could be many duplicate for history. Hence, remove the duplicates.
       map((results) => filterUniqueValues(results)),
       tap(() => {
-        this.isSearchingHistory = false
+        this.isSearchingHistory = false // This ensures the flag is reset
       }),
     )
 
     const bookmarks$ = this.searchInput.valueChanges.pipe(
       startWith(''),
-      switchMap((searchInputText) => {
-        if (!searchInputText || !options.includesBookmarks) {
-          return []
+      switchMap((searchInputText: string) => {
+        if (!options.includesBookmarks) {
+          return of([]) // Return an observable of empty array
         }
         return this.chromeService
-          .bookmarksSearch(searchInputText)
+          .bookmarksSearch(searchInputText || '') // Ensure text is not null for API
           .then((bookmarks) => {
             // Filter out bookmark folders (they don't have URLs)
             const bookmarkItems = bookmarks.filter((bookmark) => bookmark.url)
 
-            // Use Fuse.js for fuzzy search
+            // Use Fuse.js for fuzzy search. If searchInputText is "", Fuse returns all items.
             const fuse = new Fuse<BookmarkTreeNode>(bookmarkItems, {
               keys: ['title', 'url'],
               isCaseSensitive: false,
             })
 
-            return fuse.search(searchInputText).map(({ item: bookmark }) => ({
-              faviconUrl: `chrome://favicon/${bookmark.url}`,
-              name: bookmark.title,
-              url: bookmark.url,
-              bookmark,
-            }))
+            return fuse
+              .search(searchInputText || '')
+              .map(({ item: bookmark }) => ({
+                // Ensure text is not null for Fuse
+                faviconUrl: `chrome://favicon/${bookmark.url}`,
+                name: bookmark.title,
+                url: bookmark.url,
+                bookmark,
+              }))
+          })
+          .catch((error) => {
+            console.error('Error fetching or searching bookmarks:', error)
+            return [] // Return empty array on error inside the promise
           })
       }),
     )
@@ -311,11 +302,17 @@ export class AppComponent implements OnInit {
         bookmarks,
         history,
       })),
-      tap(() => {
+      tap((results) => {
+        this.latestResults = results
         // Reset selection when results change
         this.selectedIndex = 0
       }),
       shareReplay(1),
+      catchError((error) => {
+        console.error('Error in combined results stream:', error)
+        // Fallback to an empty structure for all result types
+        return of({ actions: [], tabs: [], bookmarks: [], history: [] })
+      }),
     )
 
     // Create individual observables for template use
@@ -393,17 +390,44 @@ export class AppComponent implements OnInit {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    if (!this.searchInput.value || this.searchInput.value.length === 0) {
+    // Handle Escape key unconditionally first, as it should always work.
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      this.searchInput.reset()
+      this.searchInputRef?.nativeElement.focus()
+      return // Escape action is done.
+    }
+
+    // For other keys, proceed only if we have results data.
+    if (!this.latestResults) {
+      // If latestResults is null (e.g., initial state before any results are processed),
+      // and the key is not Escape, then do nothing.
+      // Default browser action for Tab, Arrows, Enter will occur.
       return
     }
 
+    const currentResults = this.latestResults
+    const totalResults =
+      currentResults.actions.length +
+      currentResults.tabs.length +
+      currentResults.bookmarks.length +
+      currentResults.history.length
+
+    // If there are no results, only Escape is handled (done above).
+    // For other keys, if totalResults is 0, we don't preventDefault or navigate.
+    if (totalResults === 0) {
+      // Tab will do its default action. Arrows/Enter do nothing.
+      return
+    }
+
+    // At this point, totalResults > 0.
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault()
         this.navigateResults('down')
         break
       case 'Tab':
-        event.preventDefault()
+        event.preventDefault() // Prevent default because we are handling it.
         if (event.shiftKey) {
           this.navigateResults('up')
         } else {
@@ -415,120 +439,101 @@ export class AppComponent implements OnInit {
         this.navigateResults('up')
         break
       case 'Enter':
-        event.preventDefault()
-        this.selectCurrentResult()
-        break
-      case 'Escape':
-        event.preventDefault()
-        this.searchInput.reset()
-        this.searchInputRef?.nativeElement.focus()
+        // Prevent default and select only if selectedIndex is valid for the current results.
+        if (this.selectedIndex < totalResults) {
+          event.preventDefault()
+          this.selectCurrentResult()
+        }
         break
     }
   }
 
   private navigateResults(direction: 'up' | 'down'): void {
-    if (!this.allResults$) {
+    const currentLatestResults = this.latestResults
+    if (!currentLatestResults) {
       return
     }
 
-    // Get current results to calculate total
-    this.allResults$
-      .pipe(
-        map(
-          (results) =>
-            results.actions.length +
-            results.tabs.length +
-            results.bookmarks.length +
-            results.history.length,
-        ),
-      )
-      .subscribe((totalResults) => {
-        if (totalResults === 0) {
-          return
-        }
+    const totalResults =
+      currentLatestResults.actions.length +
+      currentLatestResults.tabs.length +
+      currentLatestResults.bookmarks.length +
+      currentLatestResults.history.length
 
-        if (direction === 'down') {
-          this.selectedIndex = (this.selectedIndex + 1) % totalResults
-        } else {
-          this.selectedIndex =
-            this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1
-        }
+    if (totalResults === 0) {
+      return
+    }
 
-        // Scroll selected item into view
-        this.scrollSelectedItemIntoView()
-      })
-      .unsubscribe()
+    if (direction === 'down') {
+      this.selectedIndex = (this.selectedIndex + 1) % totalResults
+    } else {
+      this.selectedIndex =
+        this.selectedIndex === 0 ? totalResults - 1 : this.selectedIndex - 1
+    }
+
+    // Scroll selected item into view
+    this.scrollSelectedItemIntoView()
   }
 
   private selectCurrentResult(): void {
-    if (!this.allResults$) {
+    const currentLatestResults = this.latestResults
+    if (!currentLatestResults) {
       return
     }
 
-    this.allResults$
-      .subscribe((results) => {
-        const actionsCount = results.actions.length
-        const tabsCount = results.tabs.length
-        const bookmarksCount = results.bookmarks.length
+    const actionsCount = currentLatestResults.actions.length
+    const tabsCount = currentLatestResults.tabs.length
+    const bookmarksCount = currentLatestResults.bookmarks.length
 
-        if (this.selectedIndex < actionsCount) {
-          // Select from actions
-          const action = results.actions[this.selectedIndex]
-          if (action) {
-            this.onClickItem(action)
-          }
-        } else if (this.selectedIndex < actionsCount + tabsCount) {
-          // Select from tabs
-          const tabIndex = this.selectedIndex - actionsCount
-          const tab = results.tabs[tabIndex]
-          if (tab) {
-            this.onClickItem(tab)
-          }
-        } else if (
-          this.selectedIndex <
-          actionsCount + tabsCount + bookmarksCount
-        ) {
-          // Select from bookmarks
-          const bookmarkIndex = this.selectedIndex - actionsCount - tabsCount
-          const bookmark = results.bookmarks[bookmarkIndex]
-          if (bookmark) {
-            this.onClickItem(bookmark)
-          }
-        } else {
-          // Select from history
-          const historyIndex =
-            this.selectedIndex - actionsCount - tabsCount - bookmarksCount
-          const history = results.history[historyIndex]
-          if (history) {
-            this.onClickItem(history)
-          }
-        }
-      })
-      .unsubscribe()
+    if (this.selectedIndex < actionsCount) {
+      // Select from actions
+      const action = currentLatestResults.actions[this.selectedIndex]
+      if (action) {
+        this.onClickItem(action)
+      }
+    } else if (this.selectedIndex < actionsCount + tabsCount) {
+      // Select from tabs
+      const tabIndex = this.selectedIndex - actionsCount
+      const tab = currentLatestResults.tabs[tabIndex]
+      if (tab) {
+        this.onClickItem(tab)
+      }
+    } else if (this.selectedIndex < actionsCount + tabsCount + bookmarksCount) {
+      // Select from bookmarks
+      const bookmarkIndex = this.selectedIndex - actionsCount - tabsCount
+      const bookmark = currentLatestResults.bookmarks[bookmarkIndex]
+      if (bookmark) {
+        this.onClickItem(bookmark)
+      }
+    } else {
+      // Select from history
+      const historyIndex =
+        this.selectedIndex - actionsCount - tabsCount - bookmarksCount
+      const history = currentLatestResults.history[historyIndex]
+      if (history) {
+        this.onClickItem(history)
+      }
+    }
   }
 
   private scrollSelectedItemIntoView(): void {
     // Use setTimeout to ensure DOM has been updated after selectedIndex change
     setTimeout(() => {
-      if (!this.allResults$) {
+      const currentLatestResults = this.latestResults
+      if (!currentLatestResults) {
         return
       }
-
-      this.allResults$
-        .subscribe((results) => {
-          const elementId = this.getActiveDescendantId(results)
-          if (elementId) {
-            const element = document.getElementById(elementId)
-            if (element) {
-              element.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'nearest',
-              })
-            }
-          }
-        })
-        .unsubscribe()
+      const elementId = this.getActiveDescendantId(currentLatestResults)
+      if (elementId) {
+        const element = document.getElementById(elementId)
+        if (element) {
+          element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest',
+          })
+        }
+      }
     }, 0)
   }
 
@@ -549,5 +554,13 @@ export class AppComponent implements OnInit {
     }
     // close the popup window.
     window.close()
+  }
+
+  public handleResultItemClick(
+    item: SearchResult | BrowserAction,
+    globalIndex: number,
+  ): void {
+    this.selectedIndex = globalIndex
+    this.onClickItem(item)
   }
 }

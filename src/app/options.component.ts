@@ -16,7 +16,6 @@ function fixWrongInputDate(wrongDate: Date): Date {
   )
 }
 
-// Get YYYY-MM-DD
 function getYYYYMMDD(unixEpoch: number | Date): string {
   if (unixEpoch instanceof Date) {
     return unixEpoch.toISOString().split('T')[0]
@@ -38,7 +37,6 @@ function getYYYYMMDD(unixEpoch: number | Date): string {
   ],
 })
 export class OptionsComponent implements OnInit {
-  title = 'options'
   includesBookmarks: boolean
   includesTabs: boolean
   includesHistory: boolean

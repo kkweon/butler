@@ -1,10 +1,20 @@
 import { Injectable } from '@angular/core'
 
+/**
+ * Defines the structure for shared options across the Chrome extension.
+ * These options are typically stored in `chrome.storage.sync`.
+ */
 export interface ChromeSharedOptions {
+  /** Whether to include bookmarks in search results. */
   includesBookmarks: boolean
+  /** Whether to include browsing history in search results. */
   includesHistory: boolean
+  /** Whether to include open tabs in search results. */
   includesTabs: boolean
-
+  /**
+   * The start date for searching history, represented as a Unix epoch timestamp (milliseconds).
+   * A value of 0 typically means searching all history.
+   */
   searchHistoryStartDateInUnixEpoch: number
 }
 

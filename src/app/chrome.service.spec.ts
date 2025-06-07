@@ -130,7 +130,6 @@ describe('ChromeService', () => {
       it('should use fallback method when navigator.clipboard is not available', async () => {
         spyOnProperty(navigator, 'clipboard', 'get').and.returnValue(undefined)
 
-        // Mock document methods
         const mockTextArea = {
           value: '',
           style: { position: '', left: '', top: '' },

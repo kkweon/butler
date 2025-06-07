@@ -42,10 +42,9 @@
           *ngFor="let browserAction of results.actions; let i = index"
           [class.selected]="selectedIndex === getActionIndex(i)"
           [id]="'action-' + i"
-          (click)="onClickItem(browserAction)"
-          (keydown.enter)="onClickItem(browserAction)"
           role="option"
           [attr.aria-selected]="selectedIndex === getActionIndex(i)"
+          (click)="handleResultItemClick(browserAction, getActionIndex(i))"
         >
           <div class="result-icon">
             <mat-icon aria-hidden="true">bolt</mat-icon>
@@ -72,10 +71,9 @@
           *ngFor="let searchResult of results.tabs; let i = index"
           [class.selected]="selectedIndex === getTabIndex(i, results)"
           [id]="'tab-' + i"
-          (click)="onClickItem(searchResult)"
-          (keydown.enter)="onClickItem(searchResult)"
           role="option"
           [attr.aria-selected]="selectedIndex === getTabIndex(i, results)"
+          (click)="handleResultItemClick(searchResult, getTabIndex(i, results))"
         >
           <div class="result-icon">
             <img
@@ -111,10 +109,9 @@
           *ngFor="let searchResult of results.bookmarks; let i = index"
           [class.selected]="selectedIndex === getBookmarkIndex(i, results)"
           [id]="'bookmark-' + i"
-          (click)="onClickItem(searchResult)"
-          (keydown.enter)="onClickItem(searchResult)"
           role="option"
           [attr.aria-selected]="selectedIndex === getBookmarkIndex(i, results)"
+          (click)="handleResultItemClick(searchResult, getBookmarkIndex(i, results))"
         >
           <div class="result-icon">
             <img
@@ -150,10 +147,9 @@
           *ngFor="let searchResult of results.history; let i = index"
           [class.selected]="selectedIndex === getHistoryIndex(i, results)"
           [id]="'history-' + i"
-          (click)="onClickItem(searchResult)"
-          (keydown.enter)="onClickItem(searchResult)"
           role="option"
           [attr.aria-selected]="selectedIndex === getHistoryIndex(i, results)"
+          (click)="handleResultItemClick(searchResult, getHistoryIndex(i, results))"
         >
           <div class="result-icon">
             <mat-icon aria-hidden="true">history</mat-icon>
