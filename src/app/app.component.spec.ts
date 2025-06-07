@@ -230,7 +230,12 @@ describe('AppComponent', () => {
           tab: {} as any,
         },
       ]
-      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+      const mockResults = {
+        actions: mockActions,
+        tabs: mockTabs,
+        bookmarks: [],
+        history: [],
+      }
 
       // Initialize the component and set up test data
       await component.ngOnInit()
@@ -263,7 +268,12 @@ describe('AppComponent', () => {
           tab: {} as any,
         },
       ]
-      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+      const mockResults = {
+        actions: mockActions,
+        tabs: mockTabs,
+        bookmarks: [],
+        history: [],
+      }
 
       // Initialize the component and set up test data
       await component.ngOnInit()
@@ -296,7 +306,12 @@ describe('AppComponent', () => {
           tab: {} as any,
         },
       ]
-      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+      const mockResults = {
+        actions: mockActions,
+        tabs: mockTabs,
+        bookmarks: [],
+        history: [],
+      }
 
       // Initialize the component and set up test data
       await component.ngOnInit()
@@ -329,7 +344,12 @@ describe('AppComponent', () => {
           tab: {} as any,
         },
       ]
-      const mockResults = { actions: mockActions, tabs: mockTabs, history: [] }
+      const mockResults = {
+        actions: mockActions,
+        tabs: mockTabs,
+        bookmarks: [],
+        history: [],
+      }
 
       // Initialize the component and set up test data
       await component.ngOnInit()
