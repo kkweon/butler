@@ -19,17 +19,29 @@ const basePlugins = [
   }),
 ]
 
+// Determine if running in watch mode by checking process.argv
+const isWatchMode = process.argv.includes('--watch');
+
 if (process.env.RUN_UPDATE_MANIFEST === 'true') {
-  console.log('Configuring WebpackShellPluginNext with onBuildExit hook.')
-  basePlugins.push(
-    new WebpackShellPluginNext({
-      onBuildExit: {
-        scripts: ['bash scripts/update-manifest.sh'],
-        blocking: true,
-        parallel: false,
-      },
-    }),
-  )
+  const shellPluginOptions = {};
+
+  if (isWatchMode) {
+    console.log('Configuring WebpackShellPluginNext for watch mode (onDoneWatch).');
+    shellPluginOptions.onDoneWatch = {
+      scripts: ['bash scripts/update-manifest.sh'],
+      blocking: true, // Ensures webpack waits for the script to finish
+      parallel: false,
+    };
+  } else {
+    console.log('Configuring WebpackShellPluginNext for single build (onBuildEnd).');
+    // onBuildEnd fires after files are emitted at the end of the compilation.
+    shellPluginOptions.onBuildEnd = {
+      scripts: ['bash scripts/update-manifest.sh'],
+      blocking: true,
+      parallel: false,
+    };
+  }
+  basePlugins.push(new WebpackShellPluginNext(shellPluginOptions));
 }
 
 module.exports = {
