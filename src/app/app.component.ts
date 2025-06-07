@@ -146,6 +146,15 @@ export class AppComponent implements OnInit {
           await this.chromeService.sortTabsInAllWindows()
         },
       },
+      {
+        name: 'Copy URL',
+        action: async () => {
+          const activeTab = await this.chromeService.getCurrentActiveTab()
+          if (activeTab && activeTab.url) {
+            await this.chromeService.copyToClipboard(activeTab.url)
+          }
+        },
+      },
     ]
 
     // Create individual observables for each result type

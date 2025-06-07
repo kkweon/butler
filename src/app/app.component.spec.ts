@@ -24,6 +24,8 @@ describe('AppComponent', () => {
       'tabsRemove',
       'openSettings',
       'sortTabsInAllWindows',
+      'getCurrentActiveTab',
+      'copyToClipboard',
     ])
 
     const chromeSharedOptionsServiceSpy = jasmine.createSpyObj(
@@ -344,6 +346,90 @@ describe('AppComponent', () => {
       ;(component as any).navigateResults('up')
 
       expect(component.selectedIndex).toBe(2) // Should wrap to last (index 2)
+    })
+  })
+
+  describe('Browser Actions', () => {
+    it('should include Copy URL action and execute it correctly', async () => {
+      const mockActiveTab = {
+        id: 1,
+        url: 'https://example.com/current-page',
+        active: true,
+      }
+
+      mockChromeService.getCurrentActiveTab.and.returnValue(
+        Promise.resolve(mockActiveTab as any),
+      )
+      mockChromeService.copyToClipboard.and.returnValue(Promise.resolve())
+
+      // Initialize the component to set up browser actions
+      await component.ngOnInit()
+
+      // Trigger the search to show actions
+      component.searchInput.setValue('copy')
+      fixture.detectChanges()
+
+      // Wait for the observable to emit
+      return new Promise<void>((resolve) => {
+        component.browserActions$.subscribe((actions) => {
+          const copyUrlAction = actions.find(
+            (action) => action.name === 'Copy URL',
+          )
+          if (copyUrlAction) {
+            expect(copyUrlAction).toBeDefined()
+            expect(copyUrlAction.name).toBe('Copy URL')
+
+            // Execute the action and verify calls
+            copyUrlAction.action().then(() => {
+              expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
+              expect(mockChromeService.copyToClipboard).toHaveBeenCalledWith(
+                'https://example.com/current-page',
+              )
+              resolve()
+            })
+          }
+        })
+      })
+    })
+
+    it('should handle Copy URL action when active tab has no URL', async () => {
+      const mockActiveTab = {
+        id: 1,
+        url: undefined,
+        active: true,
+      }
+
+      mockChromeService.getCurrentActiveTab.and.returnValue(
+        Promise.resolve(mockActiveTab as any),
+      )
+      mockChromeService.copyToClipboard.and.returnValue(Promise.resolve())
+
+      // Initialize the component to set up browser actions
+      await component.ngOnInit()
+
+      // Trigger the search to show actions
+      component.searchInput.setValue('copy')
+      fixture.detectChanges()
+
+      // Wait for the observable to emit
+      return new Promise<void>((resolve) => {
+        component.browserActions$.subscribe((actions) => {
+          const copyUrlAction = actions.find(
+            (action) => action.name === 'Copy URL',
+          )
+          if (copyUrlAction) {
+            expect(copyUrlAction).toBeDefined()
+
+            // Execute the action and verify it doesn't call copyToClipboard
+            copyUrlAction.action().then(() => {
+              expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
+              // Should not call copyToClipboard when URL is undefined
+              expect(mockChromeService.copyToClipboard).not.toHaveBeenCalled()
+              resolve()
+            })
+          }
+        })
+      })
     })
   })
 })
