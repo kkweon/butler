@@ -231,9 +231,10 @@ export class AppComponent implements OnInit {
           const fuse = new Fuse<Tab>(tabs, {
             keys: ['title', 'url'],
             isCaseSensitive: false,
-          }).search(searchInputText)
+          })
+          const searchResults = fuse.search(searchInputText)
 
-          return filteredTabs.map(({ item: tab }) => ({
+          return searchResults.map(({ item: tab }) => ({
             faviconUrl: tab.favIconUrl,
             name: tab.title,
             url: tab.url,
