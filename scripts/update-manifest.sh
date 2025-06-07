@@ -30,12 +30,22 @@ if [ -z "$MANIFEST_KEY" ]; then
   exit 1
 fi
 
-# Check if manifest.json exists
-if [ ! -f "$MANIFEST_PATH" ]; then
-  echo "Error: Manifest file not found at $MANIFEST_PATH." >&2
-  echo "Make sure 'yarn build' has been run successfully and produced the manifest.json file in the dist/butler directory." >&2
-  exit 1
-fi
+# Wait for manifest.json to exist
+WAIT_TIMEOUT=30 # seconds
+WAIT_INTERVAL=1 # second
+ELAPSED_TIME=0
+
+echo "Waiting for manifest file at $MANIFEST_PATH..."
+while [ ! -f "$MANIFEST_PATH" ]; do
+  if [ "$ELAPSED_TIME" -ge "$WAIT_TIMEOUT" ]; then
+    echo "Error: Timeout waiting for manifest file at $MANIFEST_PATH." >&2
+    echo "Make sure 'yarn build' has been run successfully and produced the manifest.json file in the dist/butler directory." >&2
+    exit 1
+  fi
+  sleep "$WAIT_INTERVAL"
+  ELAPSED_TIME=$((ELAPSED_TIME + WAIT_INTERVAL))
+done
+echo "Manifest file found at $MANIFEST_PATH."
 
 # Check if jq is installed
 if ! command -v jq &> /dev/null; then
