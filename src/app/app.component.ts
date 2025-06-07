@@ -99,147 +99,97 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     const options = await this.chromeSharedOptionsService.getOptions()
 
+    // Define base browser actions that are always available
+    const getBaseBrowserActions = (): BrowserAction[] => [
+      {
+        name: 'Close other tabs',
+        action: async () => {
+          const tabs = await this.chromeService.tabsQuery({
+            currentWindow: true,
+            // Respect pinned
+            pinned: false,
+          })
+          await this.chromeService.tabsRemove(
+            tabs.filter((tab) => !tab.active).map((tab) => tab.id),
+          )
+        },
+      },
+      {
+        name: 'Close tabs to the right',
+        action: async () => {
+          const currentTab = await this.chromeService.getCurrentTab()
+          const tabs = await this.chromeService.tabsQuery({
+            currentWindow: true,
+            pinned: false,
+          })
+
+          const findIndex = tabs.findIndex((t) => t.id === currentTab.id)
+          if (findIndex === -1) {
+            // do nothing
+            return
+          }
+
+          const tabIds = tabs.slice(findIndex + 1).map((t) => t.id)
+          if (0 < tabIds.length) {
+            await this.chromeService.tabsRemove(tabIds)
+          }
+        },
+      },
+      {
+        name: 'Open settings',
+        action: async () => {
+          await this.chromeService.openSettings()
+        },
+      },
+      {
+        name: 'Sort tabs by domain',
+        action: async () => {
+          await this.chromeService.sortTabsInAllWindows()
+        },
+      },
+      {
+        name: 'Copy URL',
+        action: async () => {
+          const activeTab = await this.chromeService.getCurrentActiveTab()
+          if (activeTab && activeTab.url) {
+            await this.chromeService.copyToClipboard(activeTab.url)
+          }
+        },
+      },
+    ]
+
     // Create a function that returns browser actions based on current tab state
     const getBrowserActions = async (): Promise<BrowserAction[]> => {
+      const baseActions = getBaseBrowserActions()
+
       try {
         const activeTab = await this.chromeService.getCurrentActiveTab()
 
-        return [
-          {
-            name: activeTab?.pinned
-              ? 'Unpin the current tab'
-              : 'Pin the current tab',
-            action: async () => {
-              try {
-                const currentTab =
-                  await this.chromeService.getCurrentActiveTab()
-                if (currentTab?.id) {
-                  await this.chromeService.toggleTabPin(
-                    currentTab.id,
-                    !currentTab.pinned,
-                  )
-                }
-              } catch (error) {
-                console.error('Failed to toggle tab pin state:', error)
+        // Add pin/unpin action at the beginning if we can get tab state
+        const pinAction: BrowserAction = {
+          name: activeTab?.pinned
+            ? 'Unpin the current tab'
+            : 'Pin the current tab',
+          action: async () => {
+            try {
+              const currentTab = await this.chromeService.getCurrentActiveTab()
+              if (currentTab?.id) {
+                await this.chromeService.toggleTabPin(
+                  currentTab.id,
+                  !currentTab.pinned,
+                )
               }
-            },
+            } catch (error) {
+              console.error('Failed to toggle tab pin state:', error)
+            }
           },
-          {
-            name: 'Close other tabs',
-            action: async () => {
-              const tabs = await this.chromeService.tabsQuery({
-                currentWindow: true,
-                // Respect pinned
-                pinned: false,
-              })
-              await this.chromeService.tabsRemove(
-                tabs.filter((tab) => !tab.active).map((tab) => tab.id),
-              )
-            },
-          },
-          {
-            name: 'Close tabs to the right',
-            action: async () => {
-              const currentTab = await this.chromeService.getCurrentTab()
-              const tabs = await this.chromeService.tabsQuery({
-                currentWindow: true,
-                pinned: false,
-              })
+        }
 
-              const findIndex = tabs.findIndex((t) => t.id === currentTab.id)
-              if (findIndex === -1) {
-                // do nothing
-                return
-              }
-
-              const tabIds = tabs.slice(findIndex + 1).map((t) => t.id)
-              if (0 < tabIds.length) {
-                await this.chromeService.tabsRemove(tabIds)
-              }
-            },
-          },
-          {
-            name: 'Open settings',
-            action: async () => {
-              await this.chromeService.openSettings()
-            },
-          },
-          {
-            name: 'Sort tabs by domain',
-            action: async () => {
-              await this.chromeService.sortTabsInAllWindows()
-            },
-          },
-          {
-            name: 'Copy URL',
-            action: async () => {
-              const activeTab = await this.chromeService.getCurrentActiveTab()
-              if (activeTab && activeTab.url) {
-                await this.chromeService.copyToClipboard(activeTab.url)
-              }
-            },
-          },
-        ]
+        return [pinAction, ...baseActions]
       } catch (error) {
         console.error('Failed to get current tab state:', error)
-        // Return actions without the pin/unpin action if we can't get tab state
-        return [
-          {
-            name: 'Close other tabs',
-            action: async () => {
-              const tabs = await this.chromeService.tabsQuery({
-                currentWindow: true,
-                // Respect pinned
-                pinned: false,
-              })
-              await this.chromeService.tabsRemove(
-                tabs.filter((tab) => !tab.active).map((tab) => tab.id),
-              )
-            },
-          },
-          {
-            name: 'Close tabs to the right',
-            action: async () => {
-              const currentTab = await this.chromeService.getCurrentTab()
-              const tabs = await this.chromeService.tabsQuery({
-                currentWindow: true,
-                pinned: false,
-              })
-
-              const findIndex = tabs.findIndex((t) => t.id === currentTab.id)
-              if (findIndex === -1) {
-                // do nothing
-                return
-              }
-
-              const tabIds = tabs.slice(findIndex + 1).map((t) => t.id)
-              if (0 < tabIds.length) {
-                await this.chromeService.tabsRemove(tabIds)
-              }
-            },
-          },
-          {
-            name: 'Open settings',
-            action: async () => {
-              await this.chromeService.openSettings()
-            },
-          },
-          {
-            name: 'Sort tabs by domain',
-            action: async () => {
-              await this.chromeService.sortTabsInAllWindows()
-            },
-          },
-          {
-            name: 'Copy URL',
-            action: async () => {
-              const activeTab = await this.chromeService.getCurrentActiveTab()
-              if (activeTab && activeTab.url) {
-                await this.chromeService.copyToClipboard(activeTab.url)
-              }
-            },
-          },
-        ]
+        // Return only base actions if we can't get tab state
+        return baseActions
       }
     }
 
@@ -248,10 +198,10 @@ export class AppComponent implements OnInit {
       startWith(''),
       switchMap(async (searchInputText: string) => {
         try {
-          const browserActions = await getBrowserActions()
           if (!searchInputText) {
             return []
           }
+          const browserActions = await getBrowserActions()
           return new Fuse<BrowserAction>(browserActions, {
             isCaseSensitive: false,
             keys: ['name'],
