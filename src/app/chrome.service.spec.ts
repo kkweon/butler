@@ -166,6 +166,7 @@ describe('ChromeService', () => {
           writeText: mockWriteText,
         } as any)
 
+        spyOn(console, 'error') // Suppress console.error for this specific test
         await expectAsync(service.copyToClipboard('test')).toBeRejected()
       })
     })
