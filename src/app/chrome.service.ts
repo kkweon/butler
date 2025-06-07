@@ -93,6 +93,7 @@ export class ChromeService {
         // Fallback for older browsers
         const textArea = document.createElement('textarea')
         textArea.value = text
+        // Position the textarea off-screen to hide it from view
         textArea.style.position = 'fixed'
         textArea.style.left = '-999999px'
         textArea.style.top = '-999999px'
