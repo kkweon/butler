@@ -65,6 +65,14 @@ export class ChromeService {
     })
   }
 
+  async getCurrentActiveTab(): Promise<chrome.tabs.Tab> {
+    return new Promise((resolve) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        resolve(tabs[0])
+      })
+    })
+  }
+
   async tabsRemove(tabIds: number[]): Promise<void> {
     return new Promise((resolve) => {
       chrome.tabs.remove(tabIds, () => resolve())
@@ -75,6 +83,30 @@ export class ChromeService {
     return new Promise((resolve) => {
       chrome.runtime.openOptionsPage(resolve)
     })
+  }
+
+  async copyToClipboard(text: string): Promise<void> {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea')
+        textArea.value = text
+        // Position the textarea off-screen to hide it from view
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error)
+      throw error
+    }
   }
 
   getAllWindows(): Promise<chrome.windows.Window[]> {

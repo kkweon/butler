@@ -68,6 +68,84 @@ describe('ChromeService', () => {
       })
     })
 
+    describe('getCurrentActiveTab', () => {
+      it('should resolve with active tab from chrome.tabs.query', async () => {
+        const mockTab = { id: 1, url: 'https://example.com', active: true }
+        mockChrome.tabs.query = jasmine
+          .createSpy('query')
+          .and.callFake((queryInfo: any, callback: any) => {
+            callback([mockTab])
+          })
+
+        const result = await service.getCurrentActiveTab()
+
+        expect(mockChrome.tabs.query).toHaveBeenCalledWith(
+          { active: true, currentWindow: true },
+          jasmine.any(Function),
+        )
+        expect(result).toEqual(mockTab as any)
+      })
+    })
+
+    describe('copyToClipboard', () => {
+      it('should use navigator.clipboard.writeText when available', async () => {
+        const text = 'https://example.com'
+        const mockWriteText = jasmine
+          .createSpy('writeText')
+          .and.returnValue(Promise.resolve())
+
+        spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({
+          writeText: mockWriteText,
+        } as any)
+
+        await service.copyToClipboard(text)
+
+        expect(mockWriteText).toHaveBeenCalledWith(text)
+      })
+
+      it('should use fallback method when navigator.clipboard is not available', async () => {
+        spyOnProperty(navigator, 'clipboard', 'get').and.returnValue(undefined)
+
+        // Mock document methods
+        const mockTextArea = {
+          value: '',
+          style: { position: '', left: '', top: '' },
+          focus: jasmine.createSpy('focus'),
+          select: jasmine.createSpy('select'),
+        } as any
+
+        spyOn(document, 'createElement').and.returnValue(mockTextArea)
+        spyOn(document.body, 'appendChild')
+        spyOn(document.body, 'removeChild')
+        spyOn(document, 'execCommand').and.returnValue(true)
+
+        const text = 'https://example.com'
+        await service.copyToClipboard(text)
+
+        expect(document.createElement).toHaveBeenCalledWith('textarea')
+        expect(mockTextArea.value).toBe(text)
+        expect(document.body.appendChild).toHaveBeenCalledWith(mockTextArea)
+        expect(mockTextArea.focus).toHaveBeenCalled()
+        expect(mockTextArea.select).toHaveBeenCalled()
+        expect(document.execCommand).toHaveBeenCalledWith('copy')
+        expect(document.body.removeChild).toHaveBeenCalledWith(mockTextArea)
+      })
+
+      it('should throw error when clipboard operations fail', async () => {
+        const mockWriteText = jasmine
+          .createSpy('writeText')
+          .and.returnValue(
+            Promise.reject(new Error('Clipboard not accessible')),
+          )
+
+        spyOnProperty(navigator, 'clipboard', 'get').and.returnValue({
+          writeText: mockWriteText,
+        } as any)
+
+        await expectAsync(service.copyToClipboard('test')).toBeRejected()
+      })
+    })
+
     describe('sortTabsInAllWindows', () => {
       beforeEach(() => {
         spyOn(service, 'getAllWindows')
