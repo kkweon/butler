@@ -20,7 +20,7 @@ const basePlugins = [
 ]
 
 if (process.env.RUN_UPDATE_MANIFEST === 'true') {
-  console.log('Configuring WebpackShellPluginNext with onBuildExit hook.');
+  console.log('Configuring WebpackShellPluginNext with onBuildExit hook.')
   basePlugins.push(
     new WebpackShellPluginNext({
       onBuildExit: {
@@ -29,7 +29,7 @@ if (process.env.RUN_UPDATE_MANIFEST === 'true') {
         parallel: false,
       },
     }),
-  );
+  )
 }
 
 module.exports = {
