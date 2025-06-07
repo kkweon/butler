@@ -1,16 +1,9 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const WebpackShellPluginNext = require('webpack-shell-plugin-next')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
+// const CopyWebpackPlugin = require('copy-webpack-plugin') // Removed
 
 const basePlugins = [
-  new CopyWebpackPlugin({
-    patterns: [
-      {
-        from: 'src/manifest.json',
-        to: 'manifest.json', // Output path is relative to webpack's output.path (dist/butler)
-      },
-    ],
-  }),
+  // CopyWebpackPlugin removed from here
   new HtmlWebpackPlugin({
     filename: 'options.html',
     template: './src/options.html',
@@ -19,29 +12,17 @@ const basePlugins = [
   }),
 ]
 
-// Determine if running in watch mode by checking process.argv
-const isWatchMode = process.argv.includes('--watch');
-
 if (process.env.RUN_UPDATE_MANIFEST === 'true') {
-  const shellPluginOptions = {};
-
-  if (isWatchMode) {
-    console.log('Configuring WebpackShellPluginNext for watch mode (onDoneWatch).');
-    shellPluginOptions.onDoneWatch = {
-      scripts: ['bash scripts/update-manifest.sh'],
-      blocking: true, // Ensures webpack waits for the script to finish
-      parallel: false,
-    };
-  } else {
-    console.log('Configuring WebpackShellPluginNext for single build (onBuildEnd).');
-    // onBuildEnd fires after files are emitted at the end of the compilation.
-    shellPluginOptions.onBuildEnd = {
-      scripts: ['bash scripts/update-manifest.sh'],
-      blocking: true,
-      parallel: false,
-    };
-  }
-  basePlugins.push(new WebpackShellPluginNext(shellPluginOptions));
+  // Reverted to simpler onBuildExit hook configuration
+  basePlugins.push(
+    new WebpackShellPluginNext({
+      onBuildExit: {
+        scripts: ['bash scripts/update-manifest.sh'],
+        blocking: true,
+        parallel: false,
+      },
+    }),
+  )
 }
 
 module.exports = {
