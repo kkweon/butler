@@ -131,7 +131,16 @@ export class ChromeService {
 
     try {
       const urlObj = new URL(url)
-      return urlObj.hostname.toLowerCase()
+      const hostname = urlObj.hostname.toLowerCase()
+
+      // Extract main domain by taking the last two parts (domain.tld)
+      // This handles subdomains like www.example.com -> example.com
+      const parts = hostname.split('.')
+      if (parts.length >= 2) {
+        return parts.slice(-2).join('.')
+      }
+
+      return hostname
     } catch (error) {
       // If URL parsing fails, use the original URL for sorting
       return url.toLowerCase()

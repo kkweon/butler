@@ -152,10 +152,10 @@ describe('ChromeService', () => {
           'example.com',
         )
         expect((service as any).extractDomain('https://www.example.com')).toBe(
-          'www.example.com',
+          'example.com',
         )
         expect((service as any).extractDomain('https://sub.example.com')).toBe(
-          'sub.example.com',
+          'example.com',
         )
         expect((service as any).extractDomain('http://example.com')).toBe(
           'example.com',
@@ -243,11 +243,11 @@ describe('ChromeService', () => {
 
         await service.sortTabsInAllWindows()
 
-        // Domains should be sorted: a.example.com, other.com, www.example.com, z.example.com
+        // All example.com subdomains should be grouped together and sorted by full URL, then other.com
         expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 0 }) // a.example.com to position 0
-        // other.com (id:2) is already at index 1, so no move needed
-        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // www.example.com to position 2
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 3 }) // z.example.com to position 3
+        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 1 }) // www.example.com to position 1
+        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 2 }) // z.example.com to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 3 }) // other.com to position 3
       })
 
       it('should handle different protocols (http vs https) correctly', async () => {
