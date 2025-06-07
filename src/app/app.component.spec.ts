@@ -87,21 +87,24 @@ describe('AppComponent', () => {
   })
 
   describe('Keyboard Navigation', () => {
-    beforeEach(() => {
-      // Set up search input with a value to enable keyboard handling
-      component.searchInput.setValue('test')
-      // Mock some results by setting private arrays
-      ;(component as any).currentActions = [
-        { name: 'action1', action: () => {} },
-      ]
-      ;(component as any).currentTabs = [
-        { name: 'tab1', url: 'url1', faviconUrl: '' },
-      ]
-      ;(component as any).currentHistory = [
-        { name: 'history1', url: 'url2', faviconUrl: '' },
-      ]
-      fixture.detectChanges()
-    })
+    beforeEach(async () => {
+      // ngOnInit is called, observables are set up.
+      // We need to ensure `latestResults` has a known state for these tests.
+      // Set searchInput to a value that would typically produce results.
+      component.searchInput.setValue('test'); 
+      
+      // Directly mock `latestResults` for predictable keyboard navigation tests.
+      component['latestResults'] = {
+        actions: [{ name: 'Action 1', action: async () => {} }, { name: 'Action 2', action: async () => {} }], // 2 actions
+        tabs: [{ name: 'Tab 1', url: 'http://tab1.com', faviconUrl: '', tab: {} as any }], // 1 tab
+        bookmarks: [{ name: 'Bookmark 1', url: 'http://bookmark1.com', faviconUrl: '', bookmark: {} as any }], // 1 bookmark
+        history: [{ name: 'History 1', url: 'http://history1.com', faviconUrl: '', history: {} as any }] // 1 history item
+      };
+      // Total results: 2 + 1 + 1 + 1 = 5
+
+      fixture.detectChanges(); // Apply the changes
+      await fixture.whenStable(); // Ensure component state is stable
+    });
 
     it('should handle ArrowDown key to navigate results', () => {
       // Spy on the navigateResults method
@@ -197,176 +200,77 @@ describe('AppComponent', () => {
       expect(component.searchInputRef.nativeElement.focus).toHaveBeenCalled()
     })
 
-    it('should not handle keys when search input is empty', () => {
-      // Ensure search input is empty
-      component.searchInput.setValue('')
+    it('should not handle navigation/selection keys (except Escape) when there are no results', () => {
+      // Ensure search input might have a value, but results are empty
+      component.searchInput.setValue('querythatyieldsnoresults');
+      component['latestResults'] = { actions: [], tabs: [], bookmarks: [], history: [] }; // Force no results
+      fixture.detectChanges();
 
       // Spy on navigation methods
-      spyOn(component as any, 'navigateResults')
-      spyOn(component as any, 'selectCurrentResult')
+      spyOn(component as any, 'navigateResults');
+      spyOn(component as any, 'selectCurrentResult');
 
       // Create a keydown event for ArrowDown
-      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' })
-      spyOn(event, 'preventDefault')
+      const event = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+      spyOn(event, 'preventDefault');
 
       // Call the onKeyDown method directly
-      component.onKeyDown(event)
+      component.onKeyDown(event);
 
-      expect(event.preventDefault).not.toHaveBeenCalled()
-      expect((component as any).navigateResults).not.toHaveBeenCalled()
-    })
+      // ArrowDown should not be prevented, and navigation should not occur if no results
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect((component as any).navigateResults).not.toHaveBeenCalled();
+      expect((component as any).selectCurrentResult).not.toHaveBeenCalled(); // Also check select
+    });
 
-    it('should correctly navigate down through results', async () => {
-      // Set up mock data for testing navigation
-      const mockActions = [
-        { name: 'Action 1', action: async () => {} },
-        { name: 'Action 2', action: async () => {} },
-      ]
-      const mockTabs = [
-        {
-          name: 'Tab 1',
-          url: 'http://example.com',
-          faviconUrl: '',
-          tab: {} as any,
-        },
-      ]
-      const mockResults = {
-        actions: mockActions,
-        tabs: mockTabs,
-        bookmarks: [],
-        history: [],
-      }
+    it('should correctly navigate down through results', () => {
+      // latestResults is set in beforeEach to have 5 items.
+      // actions: 2, tabs: 1, bookmarks: 1, history: 1
+      // Indices: 0, 1 (actions), 2 (tabs), 3 (bookmarks), 4 (history)
+      
+      component.selectedIndex = 0;
+      (component as any).navigateResults('down');
+      expect(component.selectedIndex).toBe(1); // Moves from Action 1 to Action 2
 
-      // Initialize the component and set up test data
-      await component.ngOnInit()
-      component.searchInput.setValue('test')
+      component.selectedIndex = 1;
+      (component as any).navigateResults('down');
+      expect(component.selectedIndex).toBe(2); // Moves from Action 2 to Tab 1
 
-      // Manually set the allResults$ to emit test data
-      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
-        mockResults,
-      )
+      component.selectedIndex = 4; // Last item (index 4)
+      (component as any).navigateResults('down');
+      expect(component.selectedIndex).toBe(0); // Wraps to first item
+    });
 
-      component.selectedIndex = 0
+    it('should wrap around when navigating down from last result', () => {
+      // latestResults is set in beforeEach to have 5 items.
+      // Indices: 0, 1 (actions), 2 (tabs), 3 (bookmarks), 4 (history)
+      component.selectedIndex = 4; // Last result (index 4 out of 0-4)
 
       // Call navigateResults directly
-      ;(component as any).navigateResults('down')
+      (component as any).navigateResults('down');
 
-      expect(component.selectedIndex).toBe(1)
-    })
+      expect(component.selectedIndex).toBe(0); // Should wrap to first
+    });
 
-    it('should wrap around when navigating down from last result', async () => {
-      // Set up mock data for testing navigation
-      const mockActions = [
-        { name: 'Action 1', action: async () => {} },
-        { name: 'Action 2', action: async () => {} },
-      ]
-      const mockTabs = [
-        {
-          name: 'Tab 1',
-          url: 'http://example.com',
-          faviconUrl: '',
-          tab: {} as any,
-        },
-      ]
-      const mockResults = {
-        actions: mockActions,
-        tabs: mockTabs,
-        bookmarks: [],
-        history: [],
-      }
-
-      // Initialize the component and set up test data
-      await component.ngOnInit()
-      component.searchInput.setValue('test')
-
-      // Manually set the allResults$ to emit test data
-      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
-        mockResults,
-      )
-
-      component.selectedIndex = 2 // Last result (total is 3)
+    it('should correctly navigate up through results', () => {
+      // latestResults is set in beforeEach to have 5 items.
+      component.selectedIndex = 1;
 
       // Call navigateResults directly
-      ;(component as any).navigateResults('down')
+      (component as any).navigateResults('up');
 
-      expect(component.selectedIndex).toBe(0) // Should wrap to first
-    })
+      expect(component.selectedIndex).toBe(0);
+    });
 
-    it('should correctly navigate up through results', async () => {
-      // Set up mock data for testing navigation
-      const mockActions = [
-        { name: 'Action 1', action: async () => {} },
-        { name: 'Action 2', action: async () => {} },
-      ]
-      const mockTabs = [
-        {
-          name: 'Tab 1',
-          url: 'http://example.com',
-          faviconUrl: '',
-          tab: {} as any,
-        },
-      ]
-      const mockResults = {
-        actions: mockActions,
-        tabs: mockTabs,
-        bookmarks: [],
-        history: [],
-      }
-
-      // Initialize the component and set up test data
-      await component.ngOnInit()
-      component.searchInput.setValue('test')
-
-      // Manually set the allResults$ to emit test data
-      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
-        mockResults,
-      )
-
-      component.selectedIndex = 1
+    it('should wrap around when navigating up from first result', () => {
+      // latestResults is set in beforeEach to have 5 items.
+      component.selectedIndex = 0;
 
       // Call navigateResults directly
-      ;(component as any).navigateResults('up')
+      (component as any).navigateResults('up');
 
-      expect(component.selectedIndex).toBe(0)
-    })
-
-    it('should wrap around when navigating up from first result', async () => {
-      // Set up mock data for testing navigation
-      const mockActions = [
-        { name: 'Action 1', action: async () => {} },
-        { name: 'Action 2', action: async () => {} },
-      ]
-      const mockTabs = [
-        {
-          name: 'Tab 1',
-          url: 'http://example.com',
-          faviconUrl: '',
-          tab: {} as any,
-        },
-      ]
-      const mockResults = {
-        actions: mockActions,
-        tabs: mockTabs,
-        bookmarks: [],
-        history: [],
-      }
-
-      // Initialize the component and set up test data
-      await component.ngOnInit()
-      component.searchInput.setValue('test')
-
-      // Manually set the allResults$ to emit test data
-      component.allResults$ = new (await import('rxjs')).BehaviorSubject(
-        mockResults,
-      )
-
-      component.selectedIndex = 0
-
-      // Call navigateResults directly
-      ;(component as any).navigateResults('up')
-
-      expect(component.selectedIndex).toBe(2) // Should wrap to last (index 2)
-    })
+      expect(component.selectedIndex).toBe(4); // Should wrap to last (index 4 for 5 items)
+    });
   })
 
   describe('Browser Actions', () => {
