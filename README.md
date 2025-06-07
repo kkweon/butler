@@ -46,7 +46,8 @@ This project uses Angular 20 with a single project structure.
 
 To develop and test the Butler extension locally, follow these steps:
 
-1.  **Build and Watch:** Run `yarn build:work --watch` in your terminal. This command compiles the extension (including updates to `manifest.json` via `scripts/update-manifest.sh` if `EXTENSION_MANIFEST_JSON_KEY` is set in your `.env` file) and watches for any file changes, rebuilding automatically.
+1.  **Build and Watch:** Run `yarn build --watch` in your terminal. This command compiles the extension and watches for any file changes, rebuilding automatically.
+    *   _Note for specific development setups:_ If you need to automatically update `manifest.json` with an extension key (e.g., for a consistent development ID or private key), use `yarn build:work --watch` instead. This requires the `EXTENSION_MANIFEST_JSON_KEY` environment variable to be set (typically in an `.env` file at the project root), which then triggers `scripts/update-manifest.sh` after each build.
 2.  **Output Directory:** The compiled extension files will be located in the `dist/butler` folder.
 3.  **Load Unpacked Extension:**
     *   Open Chrome and navigate to `chrome://extensions`.
