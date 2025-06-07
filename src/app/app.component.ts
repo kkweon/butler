@@ -116,7 +116,7 @@ export class AppComponent implements OnInit {
       {
         name: 'Close tabs to the right',
         action: async () => {
-          const currentTab = await this.chromeService.getCurrentTab()
+          const currentTab = await this.chromeService.getCurrentActiveTab()
           const tabs = await this.chromeService.tabsQuery({
             currentWindow: true,
             pinned: false,

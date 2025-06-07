@@ -350,6 +350,214 @@ describe('AppComponent', () => {
   })
 
   describe('Browser Actions', () => {
+    it('should demonstrate the bug in "Close tabs to the right" action', async () => {
+      // Setup mock for getCurrentTab (the buggy method that returns undefined for popup)
+      mockChromeService.getCurrentTab.and.returnValue(
+        Promise.resolve(undefined),
+      )
+
+      // Setup mock tabs in the current window (unpinned only as per the query)
+      const mockTabs: chrome.tabs.Tab[] = [
+        {
+          id: 1,
+          index: 0,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://tab1.com',
+          title: 'Tab 1',
+        },
+        {
+          id: 2,
+          index: 1,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: true,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://active-tab.com',
+          title: 'Active Tab',
+        },
+        {
+          id: 3,
+          index: 2,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://tab3.com',
+          title: 'Tab 3',
+        },
+      ]
+
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(mockTabs))
+      mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
+
+      // Initialize the component
+      await component.ngOnInit()
+
+      // Test the current buggy implementation (using getCurrentTab)
+      const closeTabsActionBuggy = {
+        name: 'Close tabs to the right',
+        action: async () => {
+          const currentTab = await mockChromeService.getCurrentTab()
+          const tabs = await mockChromeService.tabsQuery({
+            currentWindow: true,
+            pinned: false,
+          })
+
+          const findIndex = tabs.findIndex((t) => t.id === currentTab?.id)
+          if (findIndex === -1) {
+            return
+          }
+
+          const tabIds = tabs.slice(findIndex + 1).map((t) => t.id)
+          if (0 < tabIds.length) {
+            await mockChromeService.tabsRemove(tabIds)
+          }
+        },
+      }
+
+      // Execute the buggy action
+      await component.onClickItem(closeTabsActionBuggy)
+
+      // Verify that getCurrentTab was called
+      expect(mockChromeService.getCurrentTab).toHaveBeenCalled()
+      expect(mockChromeService.tabsQuery).toHaveBeenCalledWith({
+        currentWindow: true,
+        pinned: false,
+      })
+      // Should NOT remove any tabs because getCurrentTab returns undefined
+      expect(mockChromeService.tabsRemove).not.toHaveBeenCalled()
+    })
+
+    it('should execute "Close tabs to the right" action correctly with the fix', async () => {
+      // Setup mock for getCurrentActiveTab (the correct method)
+      const activeTab: chrome.tabs.Tab = {
+        id: 2,
+        index: 1,
+        groupId: -1,
+        pinned: false,
+        highlighted: false,
+        windowId: 1,
+        active: true,
+        incognito: false,
+        selected: false,
+        discarded: false,
+        autoDiscardable: true,
+        url: 'https://active-tab.com',
+        title: 'Active Tab',
+      }
+
+      // Setup mock tabs in the current window (unpinned only as per the query)
+      const mockTabs: chrome.tabs.Tab[] = [
+        {
+          id: 1,
+          index: 0,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://tab1.com',
+          title: 'Tab 1',
+        },
+        activeTab,
+        {
+          id: 3,
+          index: 2,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://tab3.com',
+          title: 'Tab 3',
+        },
+        {
+          id: 4,
+          index: 3,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://tab4.com',
+          title: 'Tab 4',
+        },
+      ]
+
+      mockChromeService.getCurrentActiveTab.and.returnValue(
+        Promise.resolve(activeTab),
+      )
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(mockTabs))
+      mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
+
+      // Initialize the component
+      await component.ngOnInit()
+
+      // Test the fixed implementation (using getCurrentActiveTab)
+      const closeTabsActionFixed = {
+        name: 'Close tabs to the right',
+        action: async () => {
+          const currentTab = await mockChromeService.getCurrentActiveTab()
+          const tabs = await mockChromeService.tabsQuery({
+            currentWindow: true,
+            pinned: false,
+          })
+
+          const findIndex = tabs.findIndex((t) => t.id === currentTab.id)
+          if (findIndex === -1) {
+            return
+          }
+
+          const tabIds = tabs.slice(findIndex + 1).map((t) => t.id)
+          if (0 < tabIds.length) {
+            await mockChromeService.tabsRemove(tabIds)
+          }
+        },
+      }
+
+      // Execute the fixed action
+      await component.onClickItem(closeTabsActionFixed)
+
+      // Verify that the correct methods were called
+      expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
+      expect(mockChromeService.tabsQuery).toHaveBeenCalledWith({
+        currentWindow: true,
+        pinned: false,
+      })
+      // Should remove tabs 3 and 4 (to the right of active tab 2)
+      expect(mockChromeService.tabsRemove).toHaveBeenCalledWith([3, 4])
+    })
+
     it('should execute Copy URL action correctly', async () => {
       // Setup mock for getCurrentActiveTab with proper Tab interface
       const mockTab: chrome.tabs.Tab = {
