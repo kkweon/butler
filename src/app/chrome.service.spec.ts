@@ -87,6 +87,30 @@ describe('ChromeService', () => {
       })
     })
 
+    describe('bookmarksSearch', () => {
+      it('should resolve with bookmark results from chrome.bookmarks.search', async () => {
+        const mockBookmarks = [
+          { id: '1', title: 'Example Site', url: 'https://example.com' },
+          { id: '2', title: 'Another Site', url: 'https://another.com' },
+        ]
+        mockChrome.bookmarks = {
+          search: jasmine
+            .createSpy('search')
+            .and.callFake((query: any, callback: any) => {
+              callback(mockBookmarks)
+            }),
+        }
+
+        const result = await service.bookmarksSearch('example')
+
+        expect(mockChrome.bookmarks.search).toHaveBeenCalledWith(
+          'example',
+          jasmine.any(Function),
+        )
+        expect(result).toEqual(mockBookmarks as any)
+      })
+    })
+
     describe('copyToClipboard', () => {
       it('should use navigator.clipboard.writeText when available', async () => {
         const text = 'https://example.com'

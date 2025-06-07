@@ -15,6 +15,7 @@ import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
+import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
 
 interface BrowserAction {
   name: string
@@ -28,11 +29,13 @@ interface SearchResult {
 
   tab?: Tab
   history?: HistoryItem
+  bookmark?: BookmarkTreeNode
 }
 
 interface CombinedResults {
   actions: BrowserAction[]
   tabs: SearchResult[]
+  bookmarks: SearchResult[]
   history: SearchResult[]
 }
 
@@ -72,6 +75,7 @@ export class AppComponent implements OnInit {
 
   // Individual observables derived from combined results
   tabResults$: Observable<SearchResult[]>
+  bookmarksResults$: Observable<SearchResult[]>
   historyResults$: Observable<SearchResult[]>
   browserActions$: Observable<BrowserAction[]>
 
@@ -224,9 +228,47 @@ export class AppComponent implements OnInit {
       }),
     )
 
+    const bookmarks$ = this.searchInput.valueChanges.pipe(
+      startWith(''),
+      switchMap((searchInputText) => {
+        if (!searchInputText || !options.includesBookmarks) {
+          return []
+        }
+        return this.chromeService
+          .bookmarksSearch(searchInputText)
+          .then((bookmarks) => {
+            // Filter out bookmark folders (they don't have URLs)
+            const bookmarkItems = bookmarks.filter((bookmark) => bookmark.url)
+
+            // Use Fuse.js for fuzzy search
+            const fuse = new Fuse<BookmarkTreeNode>(bookmarkItems, {
+              keys: ['title', 'url'],
+              isCaseSensitive: false,
+            })
+
+            return fuse.search(searchInputText).map(({ item: bookmark }) => ({
+              faviconUrl: `chrome://favicon/${bookmark.url}`,
+              name: bookmark.title,
+              url: bookmark.url,
+              bookmark,
+            }))
+          })
+      }),
+    )
+
     // Combine all results into a single observable
-    this.allResults$ = combineLatest([actions$, tabs$, history$]).pipe(
-      map(([actions, tabs, history]) => ({ actions, tabs, history })),
+    this.allResults$ = combineLatest([
+      actions$,
+      tabs$,
+      bookmarks$,
+      history$,
+    ]).pipe(
+      map(([actions, tabs, bookmarks, history]) => ({
+        actions,
+        tabs,
+        bookmarks,
+        history,
+      })),
       tap(() => {
         // Reset selection when results change
         this.selectedIndex = 0
@@ -239,6 +281,9 @@ export class AppComponent implements OnInit {
       map((results) => results.actions),
     )
     this.tabResults$ = this.allResults$.pipe(map((results) => results.tabs))
+    this.bookmarksResults$ = this.allResults$.pipe(
+      map((results) => results.bookmarks),
+    )
     this.historyResults$ = this.allResults$.pipe(
       map((results) => results.history),
     )
@@ -247,7 +292,10 @@ export class AppComponent implements OnInit {
     this.totalResults$ = this.allResults$.pipe(
       map(
         (results) =>
-          results.actions.length + results.tabs.length + results.history.length,
+          results.actions.length +
+          results.tabs.length +
+          results.bookmarks.length +
+          results.history.length,
       ),
     )
 
@@ -263,14 +311,24 @@ export class AppComponent implements OnInit {
     return allResults.actions.length + tabIndex
   }
 
+  getBookmarkIndex(bookmarkIndex: number, allResults: CombinedResults): number {
+    return allResults.actions.length + allResults.tabs.length + bookmarkIndex
+  }
+
   getHistoryIndex(historyIndex: number, allResults: CombinedResults): number {
-    return allResults.actions.length + allResults.tabs.length + historyIndex
+    return (
+      allResults.actions.length +
+      allResults.tabs.length +
+      allResults.bookmarks.length +
+      historyIndex
+    )
   }
 
   getActiveDescendantId(allResults: CombinedResults): string | null {
     const totalResults =
       allResults.actions.length +
       allResults.tabs.length +
+      allResults.bookmarks.length +
       allResults.history.length
     if (totalResults === 0) {
       return null
@@ -278,13 +336,16 @@ export class AppComponent implements OnInit {
 
     const actionsCount = allResults.actions.length
     const tabsCount = allResults.tabs.length
+    const bookmarksCount = allResults.bookmarks.length
 
     if (this.selectedIndex < actionsCount) {
       return `action-${this.selectedIndex}`
     } else if (this.selectedIndex < actionsCount + tabsCount) {
       return `tab-${this.selectedIndex - actionsCount}`
+    } else if (this.selectedIndex < actionsCount + tabsCount + bookmarksCount) {
+      return `bookmark-${this.selectedIndex - actionsCount - tabsCount}`
     } else {
-      return `history-${this.selectedIndex - actionsCount - tabsCount}`
+      return `history-${this.selectedIndex - actionsCount - tabsCount - bookmarksCount}`
     }
   }
 
@@ -335,6 +396,7 @@ export class AppComponent implements OnInit {
           (results) =>
             results.actions.length +
             results.tabs.length +
+            results.bookmarks.length +
             results.history.length,
         ),
       )
@@ -365,6 +427,7 @@ export class AppComponent implements OnInit {
       .subscribe((results) => {
         const actionsCount = results.actions.length
         const tabsCount = results.tabs.length
+        const bookmarksCount = results.bookmarks.length
 
         if (this.selectedIndex < actionsCount) {
           // Select from actions
@@ -379,9 +442,20 @@ export class AppComponent implements OnInit {
           if (tab) {
             this.onClickItem(tab)
           }
+        } else if (
+          this.selectedIndex <
+          actionsCount + tabsCount + bookmarksCount
+        ) {
+          // Select from bookmarks
+          const bookmarkIndex = this.selectedIndex - actionsCount - tabsCount
+          const bookmark = results.bookmarks[bookmarkIndex]
+          if (bookmark) {
+            this.onClickItem(bookmark)
+          }
         } else {
           // Select from history
-          const historyIndex = this.selectedIndex - actionsCount - tabsCount
+          const historyIndex =
+            this.selectedIndex - actionsCount - tabsCount - bookmarksCount
           const history = results.history[historyIndex]
           if (history) {
             this.onClickItem(history)
@@ -427,7 +501,7 @@ export class AppComponent implements OnInit {
         await this.chromeService.activateWindow(result.tab.windowId)
         await this.chromeService.activateTab(result.tab.id)
       }
-    } else if (result.history) {
+    } else if (result.bookmark || result.history) {
       await this.chromeService.tabsCreate({ active: true, url: result.url })
       this.searchInput.reset()
     }

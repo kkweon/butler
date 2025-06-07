@@ -51,6 +51,17 @@ export class ChromeService {
     )
   }
 
+  bookmarksSearch(query: string): Promise<chrome.bookmarks.BookmarkTreeNode[]> {
+    return new Promise((resolve) =>
+      chrome.bookmarks.search(
+        query,
+        (results: chrome.bookmarks.BookmarkTreeNode[]) => {
+          resolve(results)
+        },
+      ),
+    )
+  }
+
   tabsCreate(
     createProperties: chrome.tabs.CreateProperties,
   ): Promise<chrome.tabs.Tab> {
