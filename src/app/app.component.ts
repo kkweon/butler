@@ -21,49 +21,11 @@ import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
+import { BrowserAction, SearchResult, CombinedResults } from './models'
+import { filterUniqueValues, isBrowserAction } from './utils'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
-
-interface BrowserAction {
-  name: string
-  action: () => Promise<void>
-}
-
-interface SearchResult {
-  name: string
-  url: string
-  faviconUrl: string
-
-  tab?: Tab
-  history?: HistoryItem
-  bookmark?: BookmarkTreeNode
-}
-
-interface CombinedResults {
-  actions: BrowserAction[]
-  tabs: SearchResult[]
-  bookmarks: SearchResult[]
-  history: SearchResult[]
-}
-
-function filterUniqueValues(results: SearchResult[]): SearchResult[] {
-  const set = new Set()
-  return results.filter((result: SearchResult) => {
-    if (set.has(result.url)) {
-      // contains; no need to return
-      return false
-    }
-    set.add(result.url)
-    return true
-  })
-}
-
-function isBrowserAction(
-  result: SearchResult | BrowserAction,
-): result is BrowserAction {
-  return (result as BrowserAction).action !== undefined
-}
 
 @Component({
   selector: 'app-root',
