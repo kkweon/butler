@@ -24,7 +24,6 @@
     *ngIf="searchInput.value?.length > 0"
     role="listbox"
     aria-label="Search results"
-    (click)="onItemClicked($event)"
   >
     <ng-container *ngIf="allResults$ | async as results">
       <!-- Browser Actions Group -->
@@ -45,6 +44,7 @@
           [id]="'action-' + i"
           role="option"
           [attr.aria-selected]="selectedIndex === getActionIndex(i)"
+          (click)="handleResultItemClick(browserAction, getActionIndex(i))"
         >
           <div class="result-icon">
             <mat-icon aria-hidden="true">bolt</mat-icon>
@@ -73,6 +73,7 @@
           [id]="'tab-' + i"
           role="option"
           [attr.aria-selected]="selectedIndex === getTabIndex(i, results)"
+          (click)="handleResultItemClick(searchResult, getTabIndex(i, results))"
         >
           <div class="result-icon">
             <img
@@ -110,6 +111,7 @@
           [id]="'bookmark-' + i"
           role="option"
           [attr.aria-selected]="selectedIndex === getBookmarkIndex(i, results)"
+          (click)="handleResultItemClick(searchResult, getBookmarkIndex(i, results))"
         >
           <div class="result-icon">
             <img
@@ -147,6 +149,7 @@
           [id]="'history-' + i"
           role="option"
           [attr.aria-selected]="selectedIndex === getHistoryIndex(i, results)"
+          (click)="handleResultItemClick(searchResult, getHistoryIndex(i, results))"
         >
           <div class="result-icon">
             <mat-icon aria-hidden="true">history</mat-icon>
