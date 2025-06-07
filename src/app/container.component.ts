@@ -21,9 +21,9 @@ export class ContainerComponent implements OnInit {
   constructor(private route: ActivatedRoute) {}
 
   ngOnInit(): void {
-    // Check if we're on the options page by query parameter
-    this.route.queryParams.subscribe((params) => {
-      this.isOptionsView = params['view'] === 'options'
+    // Check if we're on the options page by route fragment
+    this.route.fragment.subscribe((fragment) => {
+      this.isOptionsView = fragment === 'options'
     })
   }
 }
