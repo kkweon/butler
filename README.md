@@ -106,13 +106,13 @@ yarn zip
 
 ### Architecture
 
-- **Main Extension** (`src/`): Single Angular application with both popup and options views using query parameter routing
-- **Popup View** (default): Search interface for tabs, history, and browser actions
-- **Options View** (`?view=options`): Settings interface for configuring search preferences
-- **Build System**: Single Angular project with simplified build pipeline
-- **CI/CD**: Automated testing and Chrome Web Store publishing via semantic-release
+- **Angular Project Structure** (`src/`): The extension is built as a single Angular CLI project. This project compiles into the necessary assets for the Chrome extension, including distinct HTML pages for the popup and options UI.
+- **Popup View** (`index.html`): This is the default interface when clicking the extension icon. It provides the search functionality for tabs, history, and browser actions. It bootstraps the main Angular application components for the popup.
+- **Options View** (`options.html`): This page is accessible via the browser's extension management page or a link/action within the extension. It allows users to configure search preferences. It bootstraps the Angular components specific to the options UI.
+- **Build System**: The Angular CLI is configured (via `angular.json` and `custom-webpack.config.js`) to produce the main popup application (`index.html` and its JavaScript) and the options page application (`options.html` and its JavaScript) from a unified codebase.
+- **CI/CD**: Automated testing (unit tests via Karma) and Chrome Web Store publishing are managed using GitHub Actions and semantic-release.
 
-The application uses query parameter routing to switch between popup and options views within a single Angular application, eliminating the complexity of multiple projects while maintaining clear separation of concerns.
+The extension utilizes separate HTML entry points (`index.html` for the popup, `options.html` for settings) as defined in `manifest.json`. Each entry point bootstraps its respective Angular components. This approach allows for a shared codebase (services, utilities, common components) within a single Angular project, while providing the distinct pages required by the Chrome extension architecture, rather than using client-side routing (like query parameters) to switch between these major UIs.
 
 ### Chrome Permissions
 
