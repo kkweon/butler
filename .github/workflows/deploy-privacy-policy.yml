@@ -3,7 +3,7 @@ name: Deploy Privacy Policy to GitHub Pages
 on:
   push:
     branches:
-      - main # Or your default branch
+      - master # Or your default branch
     paths:
       - 'sites/**'
 
