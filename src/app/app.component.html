@@ -111,7 +111,9 @@
           [id]="'bookmark-' + i"
           role="option"
           [attr.aria-selected]="selectedIndex === getBookmarkIndex(i, results)"
-          (click)="handleResultItemClick(searchResult, getBookmarkIndex(i, results))"
+          (click)="
+            handleResultItemClick(searchResult, getBookmarkIndex(i, results))
+          "
         >
           <div class="result-icon">
             <img
@@ -149,7 +151,9 @@
           [id]="'history-' + i"
           role="option"
           [attr.aria-selected]="selectedIndex === getHistoryIndex(i, results)"
-          (click)="handleResultItemClick(searchResult, getHistoryIndex(i, results))"
+          (click)="
+            handleResultItemClick(searchResult, getHistoryIndex(i, results))
+          "
         >
           <div class="result-icon">
             <mat-icon aria-hidden="true">history</mat-icon>

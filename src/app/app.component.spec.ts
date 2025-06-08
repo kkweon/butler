@@ -664,6 +664,5 @@ describe('AppComponent', () => {
 
       expect(mockAction.action).toHaveBeenCalled()
     })
-    })
   })
 })
