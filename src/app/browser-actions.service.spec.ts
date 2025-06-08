@@ -111,6 +111,8 @@ describe('BrowserActionsService', () => {
     })
 
     it('should return only base actions when getCurrentActiveTab fails', async () => {
+      spyOn(console, 'error'); // Suppress console.error for this test
+
       mockChromeService.getCurrentActiveTab.and.returnValue(
         Promise.reject(new Error('Failed to get tab')),
       )
