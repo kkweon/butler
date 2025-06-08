@@ -23,7 +23,7 @@ import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 import { BrowserAction, SearchResult, CombinedResults } from './models'
 import { filterUniqueValues, isBrowserAction } from './utils'
-import { createBaseBrowserActions } from './browser-actions'
+import { BrowserActionsService } from './browser-actions.service'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
@@ -61,6 +61,7 @@ export class AppComponent implements OnInit {
   constructor(
     private chromeService: ChromeService,
     private chromeSharedOptionsService: ChromeSharedOptionsService,
+    private browserActionsService: BrowserActionsService,
   ) {}
 
   get selectedIndex(): number {
@@ -132,42 +133,8 @@ export class AppComponent implements OnInit {
     this.hasAnyResults$ = this.totalResults$.pipe(map((total) => total > 0))
   }
 
-  private _getBaseBrowserActions(): BrowserAction[] {
-    return createBaseBrowserActions(this.chromeService)
-  }
-
   private async _getBrowserActions(): Promise<BrowserAction[]> {
-    const baseActions = this._getBaseBrowserActions()
-
-    try {
-      const activeTab = await this.chromeService.getCurrentActiveTab()
-
-      // Add pin/unpin action at the beginning if we can get tab state
-      const pinAction: BrowserAction = {
-        name: activeTab?.pinned
-          ? 'Unpin the current tab'
-          : 'Pin the current tab',
-        action: async () => {
-          try {
-            const currentTab = await this.chromeService.getCurrentActiveTab()
-            if (currentTab?.id) {
-              await this.chromeService.toggleTabPin(
-                currentTab.id,
-                !currentTab.pinned,
-              )
-            }
-          } catch (error) {
-            console.error('Failed to toggle tab pin state:', error)
-          }
-        },
-      }
-
-      return [pinAction, ...baseActions]
-    } catch (error) {
-      console.error('Failed to get current tab state:', error)
-      // Return only base actions if we can't get tab state
-      return baseActions
-    }
+    return await this.browserActionsService.getBrowserActions()
   }
 
   private _initializeActionsStream(): Observable<BrowserAction[]> {

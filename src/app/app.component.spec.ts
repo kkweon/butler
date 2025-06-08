@@ -5,13 +5,14 @@ import { MatIconModule } from '@angular/material/icon'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { ChromeService } from './chrome.service'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
-import { createBaseBrowserActions } from './browser-actions'
+import { BrowserActionsService } from './browser-actions.service'
 
 describe('AppComponent', () => {
   let component: AppComponent
   let fixture: ComponentFixture<AppComponent>
   let mockChromeService: jasmine.SpyObj<ChromeService>
   let mockChromeSharedOptionsService: jasmine.SpyObj<ChromeSharedOptionsService>
+  let mockBrowserActionsService: BrowserActionsService
 
   beforeEach(waitForAsync(() => {
     const chromeServiceSpy = jasmine.createSpyObj('ChromeService', [
@@ -30,12 +31,15 @@ describe('AppComponent', () => {
       'bookmarksSearch',
       'moveCurrentTabToFirst',
       'moveCurrentTabToLast',
+      'toggleTabPin',
     ])
 
     const chromeSharedOptionsServiceSpy = jasmine.createSpyObj(
       'ChromeSharedOptionsService',
       ['getOptions'],
     )
+
+    // For BrowserActionsService, we'll use the real service with mocked ChromeService
 
     // Set up default mock returns
     chromeSharedOptionsServiceSpy.getOptions.and.returnValue(
@@ -64,6 +68,7 @@ describe('AppComponent', () => {
           provide: ChromeSharedOptionsService,
           useValue: chromeSharedOptionsServiceSpy,
         },
+        // BrowserActionsService will be real service, injected with mocked ChromeService
       ],
       // No declarations for standalone components
     }).compileComponents()
@@ -74,6 +79,7 @@ describe('AppComponent', () => {
     mockChromeSharedOptionsService = TestBed.inject(
       ChromeSharedOptionsService,
     ) as jasmine.SpyObj<ChromeSharedOptionsService>
+    mockBrowserActionsService = TestBed.inject(BrowserActionsService)
   }))
 
   beforeEach(() => {
@@ -489,9 +495,9 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      // Use the actual browser action from the factory function
-      const baseBrowserActions = createBaseBrowserActions(mockChromeService)
-      const copyUrlAction = baseBrowserActions.find(
+      // Use the actual browser action from the service
+      const browserActions = await mockBrowserActionsService.getBrowserActions()
+      const copyUrlAction = browserActions.find(
         (action) => action.name === 'Copy URL',
       )
 
@@ -528,9 +534,9 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      // Use the actual browser action from the factory function
-      const baseBrowserActions = createBaseBrowserActions(mockChromeService)
-      const copyUrlAction = baseBrowserActions.find(
+      // Use the actual browser action from the service
+      const browserActions = await mockBrowserActionsService.getBrowserActions()
+      const copyUrlAction = browserActions.find(
         (action) => action.name === 'Copy URL',
       )
 
@@ -546,9 +552,9 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      // Use the actual browser action from the factory function
-      const baseBrowserActions = createBaseBrowserActions(mockChromeService)
-      const moveToFirstAction = baseBrowserActions.find(
+      // Use the actual browser action from the service
+      const browserActions = await mockBrowserActionsService.getBrowserActions()
+      const moveToFirstAction = browserActions.find(
         (action) => action.name === 'Move current tab to first',
       )
 
@@ -563,9 +569,9 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      // Use the actual browser action from the factory function
-      const baseBrowserActions = createBaseBrowserActions(mockChromeService)
-      const moveToLastAction = baseBrowserActions.find(
+      // Use the actual browser action from the service
+      const browserActions = await mockBrowserActionsService.getBrowserActions()
+      const moveToLastAction = browserActions.find(
         (action) => action.name === 'Move current tab to last',
       )
 
@@ -578,8 +584,8 @@ describe('AppComponent', () => {
     it('should include "Move current tab to first" and "Move current tab to last" actions in base actions', async () => {
       await component.ngOnInit()
 
-      // Get all browser actions
-      const browserActions = (component as any)._getBaseBrowserActions()
+      // Get all browser actions from the service
+      const browserActions = mockBrowserActionsService.getBaseBrowserActions()
 
       const moveToFirstAction = browserActions.find(
         (action: any) => action.name === 'Move current tab to first',
