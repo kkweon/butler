@@ -73,8 +73,66 @@ export class AppComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     const options = await this.chromeSharedOptionsService.getOptions()
 
-    // Define base browser actions that are always available
-    const getBaseBrowserActions = (): BrowserAction[] => [
+    // Initialize individual observables for each result type
+    const actions$ = this._initializeActionsStream()
+    const tabs$ = this._initializeTabsStream(options)
+    const history$ = this._initializeHistoryStream(options)
+    const bookmarks$ = this._initializeBookmarksStream(options)
+
+    // Combine all results into a single observable
+    this.allResults$ = combineLatest([
+      actions$,
+      tabs$,
+      bookmarks$,
+      history$,
+    ]).pipe(
+      map(([actions, tabs, bookmarks, history]) => ({
+        actions,
+        tabs,
+        bookmarks,
+        history,
+      })),
+      tap((results) => {
+        this.latestResults = results
+        // Reset selection when results change
+        this.selectedIndex = 0
+      }),
+      shareReplay(1),
+      catchError((error) => {
+        console.error('Error in combined results stream:', error)
+        // Fallback to an empty structure for all result types
+        return of({ actions: [], tabs: [], bookmarks: [], history: [] })
+      }),
+    )
+
+    // Create individual observables for template use
+    this.browserActions$ = this.allResults$.pipe(
+      map((results) => results.actions),
+    )
+    this.tabResults$ = this.allResults$.pipe(map((results) => results.tabs))
+    this.bookmarksResults$ = this.allResults$.pipe(
+      map((results) => results.bookmarks),
+    )
+    this.historyResults$ = this.allResults$.pipe(
+      map((results) => results.history),
+    )
+
+    // Initialize computed observables
+    this.totalResults$ = this.allResults$.pipe(
+      map(
+        (results) =>
+          results.actions.length +
+          results.tabs.length +
+          results.bookmarks.length +
+          results.history.length,
+      ),
+    )
+
+    this.hasAnyResults$ = this.totalResults$.pipe(map((total) => total > 0))
+  }
+
+  private _getBaseBrowserActions(): BrowserAction[] {
+    return [
       {
         name: 'Close other tabs',
         action: async () => {
@@ -131,48 +189,48 @@ export class AppComponent implements OnInit {
         },
       },
     ]
+  }
 
-    // Create a function that returns browser actions based on current tab state
-    const getBrowserActions = async (): Promise<BrowserAction[]> => {
-      const baseActions = getBaseBrowserActions()
+  private async _getBrowserActions(): Promise<BrowserAction[]> {
+    const baseActions = this._getBaseBrowserActions()
 
-      try {
-        const activeTab = await this.chromeService.getCurrentActiveTab()
+    try {
+      const activeTab = await this.chromeService.getCurrentActiveTab()
 
-        // Add pin/unpin action at the beginning if we can get tab state
-        const pinAction: BrowserAction = {
-          name: activeTab?.pinned
-            ? 'Unpin the current tab'
-            : 'Pin the current tab',
-          action: async () => {
-            try {
-              const currentTab = await this.chromeService.getCurrentActiveTab()
-              if (currentTab?.id) {
-                await this.chromeService.toggleTabPin(
-                  currentTab.id,
-                  !currentTab.pinned,
-                )
-              }
-            } catch (error) {
-              console.error('Failed to toggle tab pin state:', error)
+      // Add pin/unpin action at the beginning if we can get tab state
+      const pinAction: BrowserAction = {
+        name: activeTab?.pinned
+          ? 'Unpin the current tab'
+          : 'Pin the current tab',
+        action: async () => {
+          try {
+            const currentTab = await this.chromeService.getCurrentActiveTab()
+            if (currentTab?.id) {
+              await this.chromeService.toggleTabPin(
+                currentTab.id,
+                !currentTab.pinned,
+              )
             }
-          },
-        }
-
-        return [pinAction, ...baseActions]
-      } catch (error) {
-        console.error('Failed to get current tab state:', error)
-        // Return only base actions if we can't get tab state
-        return baseActions
+          } catch (error) {
+            console.error('Failed to toggle tab pin state:', error)
+          }
+        },
       }
-    }
 
-    // Create individual observables for each result type
-    const actions$ = this.searchInput.valueChanges.pipe(
+      return [pinAction, ...baseActions]
+    } catch (error) {
+      console.error('Failed to get current tab state:', error)
+      // Return only base actions if we can't get tab state
+      return baseActions
+    }
+  }
+
+  private _initializeActionsStream(): Observable<BrowserAction[]> {
+    return this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap(async (searchInputText: string) => {
         try {
-          const browserActions = await getBrowserActions() // Get actions first
+          const browserActions = await this._getBrowserActions() // Get actions first
           if (!searchInputText) {
             return browserActions // Return all actions if input is empty
           }
@@ -189,8 +247,14 @@ export class AppComponent implements OnInit {
         }
       }),
     )
+  }
 
-    const tabs$ = this.searchInput.valueChanges.pipe(
+  private _initializeTabsStream(
+    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<infer U>
+      ? U
+      : never,
+  ): Observable<SearchResult[]> {
+    return this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap((searchInputText: string) => {
         if (!options.includesTabs) {
@@ -219,8 +283,14 @@ export class AppComponent implements OnInit {
           })
       }),
     )
+  }
 
-    const history$ = this.searchInput.valueChanges.pipe(
+  private _initializeHistoryStream(
+    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<infer U>
+      ? U
+      : never,
+  ): Observable<SearchResult[]> {
+    return this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap((searchInputText: string) => {
         if (!options.includesHistory) {
@@ -253,8 +323,14 @@ export class AppComponent implements OnInit {
         this.isSearchingHistory = false // This ensures the flag is reset
       }),
     )
+  }
 
-    const bookmarks$ = this.searchInput.valueChanges.pipe(
+  private _initializeBookmarksStream(
+    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<infer U>
+      ? U
+      : never,
+  ): Observable<SearchResult[]> {
+    return this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap((searchInputText: string) => {
         if (!options.includesBookmarks) {
@@ -288,57 +364,6 @@ export class AppComponent implements OnInit {
           })
       }),
     )
-
-    // Combine all results into a single observable
-    this.allResults$ = combineLatest([
-      actions$,
-      tabs$,
-      bookmarks$,
-      history$,
-    ]).pipe(
-      map(([actions, tabs, bookmarks, history]) => ({
-        actions,
-        tabs,
-        bookmarks,
-        history,
-      })),
-      tap((results) => {
-        this.latestResults = results
-        // Reset selection when results change
-        this.selectedIndex = 0
-      }),
-      shareReplay(1),
-      catchError((error) => {
-        console.error('Error in combined results stream:', error)
-        // Fallback to an empty structure for all result types
-        return of({ actions: [], tabs: [], bookmarks: [], history: [] })
-      }),
-    )
-
-    // Create individual observables for template use
-    this.browserActions$ = this.allResults$.pipe(
-      map((results) => results.actions),
-    )
-    this.tabResults$ = this.allResults$.pipe(map((results) => results.tabs))
-    this.bookmarksResults$ = this.allResults$.pipe(
-      map((results) => results.bookmarks),
-    )
-    this.historyResults$ = this.allResults$.pipe(
-      map((results) => results.history),
-    )
-
-    // Initialize computed observables
-    this.totalResults$ = this.allResults$.pipe(
-      map(
-        (results) =>
-          results.actions.length +
-          results.tabs.length +
-          results.bookmarks.length +
-          results.history.length,
-      ),
-    )
-
-    this.hasAnyResults$ = this.totalResults$.pipe(map((total) => total > 0))
   }
 
   // Index calculation for result selection (now using observables)
