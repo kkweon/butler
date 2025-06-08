@@ -218,6 +218,229 @@ describe('ChromeService', () => {
       })
     })
 
+    describe('moveCurrentTabToFirst', () => {
+      beforeEach(() => {
+        mockChrome.tabs.query = jasmine.createSpy('query')
+        mockChrome.tabs.move = jasmine.createSpy('move')
+        spyOn(service, 'getCurrentActiveTab')
+        spyOn(service, 'tabsQuery')
+        spyOn(service, 'tabsMove').and.returnValue(Promise.resolve({} as any))
+      })
+
+      it('should move unpinned active tab to first position among unpinned tabs', async () => {
+        const activeTab = { id: 4, index: 3, pinned: false, windowId: 1 }
+        const allTabs = [
+          { id: 1, index: 0, pinned: true },
+          { id: 2, index: 1, pinned: true },
+          { id: 3, index: 2, pinned: false },
+          { id: 4, index: 3, pinned: false }, // active tab
+        ]
+
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveCurrentTabToFirst()
+
+        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // First unpinned position
+      })
+
+      it('should move pinned active tab to first position among pinned tabs', async () => {
+        const activeTab = { id: 2, index: 1, pinned: true, windowId: 1 }
+        const allTabs = [
+          { id: 1, index: 0, pinned: true },
+          { id: 2, index: 1, pinned: true }, // active tab
+          { id: 3, index: 2, pinned: false },
+          { id: 4, index: 3, pinned: false },
+        ]
+
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveCurrentTabToFirst()
+
+        expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 0 }) // First pinned position
+      })
+
+      it('should not move tab if already at first position', async () => {
+        const activeTab = { id: 1, index: 0, pinned: true, windowId: 1 }
+        const allTabs = [
+          { id: 1, index: 0, pinned: true }, // active tab already at first
+          { id: 2, index: 1, pinned: true },
+          { id: 3, index: 2, pinned: false },
+        ]
+
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveCurrentTabToFirst()
+
+        expect(service.tabsMove).not.toHaveBeenCalled()
+      })
+
+      it('should not move unpinned tab if already at first unpinned position', async () => {
+        const activeTab = { id: 3, index: 2, pinned: false, windowId: 1 }
+        const allTabs = [
+          { id: 1, index: 0, pinned: true },
+          { id: 2, index: 1, pinned: true },
+          { id: 3, index: 2, pinned: false }, // active tab already at first unpinned
+          { id: 4, index: 3, pinned: false },
+        ]
+
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveCurrentTabToFirst()
+
+        expect(service.tabsMove).not.toHaveBeenCalled()
+      })
+
+      it('should throw error when no active tab found', async () => {
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(null),
+        )
+
+        spyOn(console, 'error') // Suppress console error output
+
+        await expectAsync(service.moveCurrentTabToFirst()).toBeRejectedWith(
+          new Error('No active tab found'),
+        )
+      })
+
+      it('should throw error when active tab has no ID', async () => {
+        const activeTab = { index: 0, pinned: true, windowId: 1 } // no id
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+
+        spyOn(console, 'error') // Suppress console error output
+
+        await expectAsync(service.moveCurrentTabToFirst()).toBeRejectedWith(
+          new Error('No active tab found'),
+        )
+      })
+    })
+
+    describe('moveCurrentTabToLast', () => {
+      beforeEach(() => {
+        mockChrome.tabs.query = jasmine.createSpy('query')
+        mockChrome.tabs.move = jasmine.createSpy('move')
+        spyOn(service, 'getCurrentActiveTab')
+        spyOn(service, 'tabsQuery')
+        spyOn(service, 'tabsMove').and.returnValue(Promise.resolve({} as any))
+      })
+
+      it('should move unpinned active tab to last position among all tabs', async () => {
+        const activeTab = { id: 3, index: 2, pinned: false, windowId: 1 }
+        const allTabs = [
+          { id: 1, index: 0, pinned: true },
+          { id: 2, index: 1, pinned: true },
+          { id: 3, index: 2, pinned: false }, // active tab
+          { id: 4, index: 3, pinned: false },
+        ]
+
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveCurrentTabToLast()
+
+        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 3 }) // Last position overall
+      })
+
+      it('should move pinned active tab to last position among pinned tabs', async () => {
+        const activeTab = { id: 1, index: 0, pinned: true, windowId: 1 }
+        const allTabs = [
+          { id: 1, index: 0, pinned: true }, // active tab
+          { id: 2, index: 1, pinned: true },
+          { id: 3, index: 2, pinned: false },
+          { id: 4, index: 3, pinned: false },
+        ]
+
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveCurrentTabToLast()
+
+        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 1 }) // Last pinned position
+      })
+
+      it('should not move tab if already at last position', async () => {
+        const activeTab = { id: 4, index: 3, pinned: false, windowId: 1 }
+        const allTabs = [
+          { id: 1, index: 0, pinned: true },
+          { id: 2, index: 1, pinned: true },
+          { id: 3, index: 2, pinned: false },
+          { id: 4, index: 3, pinned: false }, // active tab already at last
+        ]
+
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveCurrentTabToLast()
+
+        expect(service.tabsMove).not.toHaveBeenCalled()
+      })
+
+      it('should handle single pinned tab correctly', async () => {
+        const activeTab = { id: 1, index: 0, pinned: true, windowId: 1 }
+        const allTabs = [
+          { id: 1, index: 0, pinned: true }, // only pinned tab
+          { id: 2, index: 1, pinned: false },
+          { id: 3, index: 2, pinned: false },
+        ]
+
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(activeTab),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveCurrentTabToLast()
+
+        expect(service.tabsMove).not.toHaveBeenCalled() // Already at last pinned position
+      })
+
+      it('should throw error when no active tab found', async () => {
+        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
+          Promise.resolve(null),
+        )
+
+        spyOn(console, 'error') // Suppress console error output
+
+        await expectAsync(service.moveCurrentTabToLast()).toBeRejectedWith(
+          new Error('No active tab found'),
+        )
+      })
+    })
+
     describe('extractDomain', () => {
       it('should extract domain correctly', () => {
         expect((service as any).extractDomain('https://example.com')).toBe(

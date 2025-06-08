@@ -39,6 +39,8 @@ describe('BrowserActionsService', () => {
       'sortTabsInAllWindows',
       'copyToClipboard',
       'toggleTabPin',
+      'moveCurrentTabToFirst',
+      'moveCurrentTabToLast',
     ])
 
     TestBed.configureTestingModule({
@@ -60,7 +62,7 @@ describe('BrowserActionsService', () => {
       const actions = service.getBaseBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(6)
+      expect(actions.length).toBe(8)
       expect(actions.map((a) => a.name)).toEqual([
         'Close other tabs',
         'Close tabs to the right',
@@ -68,6 +70,8 @@ describe('BrowserActionsService', () => {
         'Sort tabs by domain',
         'Copy URL',
         'Close duplicate tabs',
+        'Move current tab to first',
+        'Move current tab to last',
       ])
     })
 
@@ -91,7 +95,7 @@ describe('BrowserActionsService', () => {
       const actions = await service.getBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(7) // 6 base + 1 pin action
+      expect(actions.length).toBe(9) // 8 base + 1 pin action
       expect(actions[0].name).toBe('Pin the current tab')
     })
 
@@ -114,7 +118,7 @@ describe('BrowserActionsService', () => {
       const actions = await service.getBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(6) // Only base actions
+      expect(actions.length).toBe(8) // Only base actions
     })
   })
 
@@ -218,6 +222,40 @@ describe('BrowserActionsService', () => {
       })
       // Should not remove any tabs since tab with undefined URL is ignored
       expect(mockChromeService.tabsRemove).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Move current tab to first action', () => {
+    it('should call moveCurrentTabToFirst on ChromeService', async () => {
+      const baseActions = service.getBaseBrowserActions()
+      const moveToFirstAction = baseActions.find(
+        (action) => action.name === 'Move current tab to first',
+      )
+
+      expect(moveToFirstAction).toBeDefined()
+
+      mockChromeService.moveCurrentTabToFirst.and.returnValue(Promise.resolve())
+
+      await moveToFirstAction!.action()
+
+      expect(mockChromeService.moveCurrentTabToFirst).toHaveBeenCalled()
+    })
+  })
+
+  describe('Move current tab to last action', () => {
+    it('should call moveCurrentTabToLast on ChromeService', async () => {
+      const baseActions = service.getBaseBrowserActions()
+      const moveToLastAction = baseActions.find(
+        (action) => action.name === 'Move current tab to last',
+      )
+
+      expect(moveToLastAction).toBeDefined()
+
+      mockChromeService.moveCurrentTabToLast.and.returnValue(Promise.resolve())
+
+      await moveToLastAction!.action()
+
+      expect(mockChromeService.moveCurrentTabToLast).toHaveBeenCalled()
     })
   })
 })

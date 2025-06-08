@@ -76,6 +76,18 @@ export class BrowserActionsService {
           await this.closeDuplicateTabs()
         },
       },
+      {
+        name: 'Move current tab to first',
+        action: async () => {
+          await this.chromeService.moveCurrentTabToFirst()
+        },
+      },
+      {
+        name: 'Move current tab to last',
+        action: async () => {
+          await this.chromeService.moveCurrentTabToLast()
+        },
+      },
     ]
   }
 

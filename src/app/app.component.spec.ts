@@ -62,6 +62,9 @@ describe('AppComponent', () => {
       'getCurrentActiveTab',
       'copyToClipboard',
       'bookmarksSearch',
+      'moveCurrentTabToFirst',
+      'moveCurrentTabToLast',
+      'toggleTabPin',
     ])
 
     const chromeSharedOptionsServiceSpy = jasmine.createSpyObj(
@@ -88,13 +91,18 @@ describe('AppComponent', () => {
     chromeServiceSpy.historySearch.and.returnValue(Promise.resolve([]))
     chromeServiceSpy.bookmarksSearch.and.returnValue(Promise.resolve([]))
 
-    // Mock browser actions service to return default actions
-    browserActionsServiceSpy.getBrowserActions.and.returnValue(
-      Promise.resolve([
-        { name: 'Test Action 1', action: async () => {} },
-        { name: 'Test Action 2', action: async () => {} },
-      ]),
+    // Create real browser actions service instance to get actual actions
+    const realBrowserActionsService = new BrowserActionsService(
+      chromeServiceSpy,
     )
+
+    // Mock browser actions service to return actual browser actions
+    browserActionsServiceSpy.getBrowserActions.and.callFake(async () => {
+      return await realBrowserActionsService.getBrowserActions()
+    })
+    browserActionsServiceSpy.getBaseBrowserActions.and.callFake(() => {
+      return realBrowserActionsService.getBaseBrowserActions()
+    })
 
     TestBed.configureTestingModule({
       imports: [
@@ -541,17 +549,14 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      const copyUrlAction = {
-        name: 'Copy URL',
-        action: async () => {
-          const activeTab = await mockChromeService.getCurrentActiveTab()
-          if (activeTab && activeTab.url) {
-            await mockChromeService.copyToClipboard(activeTab.url)
-          }
-        },
-      }
+      // Use the actual browser action from the service
+      const browserActions = await mockBrowserActionsService.getBrowserActions()
+      const copyUrlAction = browserActions.find(
+        (action) => action.name === 'Copy URL',
+      )
 
-      await component.onClickItem(copyUrlAction)
+      expect(copyUrlAction).toBeDefined()
+      await component.onClickItem(copyUrlAction!)
 
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.copyToClipboard).toHaveBeenCalledWith(
@@ -583,20 +588,67 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      const copyUrlAction = {
-        name: 'Copy URL',
-        action: async () => {
-          const activeTab = await mockChromeService.getCurrentActiveTab()
-          if (activeTab && activeTab.url) {
-            await mockChromeService.copyToClipboard(activeTab.url)
-          }
-        },
-      }
+      // Use the actual browser action from the service
+      const browserActions = await mockBrowserActionsService.getBrowserActions()
+      const copyUrlAction = browserActions.find(
+        (action) => action.name === 'Copy URL',
+      )
 
-      await component.onClickItem(copyUrlAction)
+      expect(copyUrlAction).toBeDefined()
+      await component.onClickItem(copyUrlAction!)
 
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.copyToClipboard).not.toHaveBeenCalled()
+    })
+
+    it('should execute "Move current tab to first" action correctly', async () => {
+      mockChromeService.moveCurrentTabToFirst.and.returnValue(Promise.resolve())
+
+      // Mock browser actions to include the move to first action
+      const mockActions = [
+        {
+          name: 'Move current tab to first',
+          action: jasmine.createSpy('moveToFirst').and.callFake(async () => {
+            await mockChromeService.moveCurrentTabToFirst()
+          }),
+        },
+      ]
+      mockBrowserActionsService.getBrowserActions.and.returnValue(
+        Promise.resolve(mockActions),
+      )
+
+      await component.ngOnInit()
+
+      const moveToFirstAction = mockActions[0]
+      await component.onClickItem(moveToFirstAction)
+
+      expect(moveToFirstAction.action).toHaveBeenCalled()
+      expect(mockChromeService.moveCurrentTabToFirst).toHaveBeenCalled()
+    })
+
+    it('should execute "Move current tab to last" action correctly', async () => {
+      mockChromeService.moveCurrentTabToLast.and.returnValue(Promise.resolve())
+
+      // Mock browser actions to include the move to last action
+      const mockActions = [
+        {
+          name: 'Move current tab to last',
+          action: jasmine.createSpy('moveToLast').and.callFake(async () => {
+            await mockChromeService.moveCurrentTabToLast()
+          }),
+        },
+      ]
+      mockBrowserActionsService.getBrowserActions.and.returnValue(
+        Promise.resolve(mockActions),
+      )
+
+      await component.ngOnInit()
+
+      const moveToLastAction = mockActions[0]
+      await component.onClickItem(moveToLastAction)
+
+      expect(moveToLastAction.action).toHaveBeenCalled()
+      expect(mockChromeService.moveCurrentTabToLast).toHaveBeenCalled()
     })
 
     it('should use browser actions service for actions', () => {
