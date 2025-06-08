@@ -27,6 +27,14 @@
         a:hover {
             text-decoration: underline;
         }
+        code {
+            background-color: #f0f0f0;
+            padding: 0.2em 0.4em;
+            margin: 0;
+            font-size: 85%;
+            border-radius: 3px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
@@ -41,15 +49,15 @@
 
     <h2>2. What Information Do We Process Locally?</h2>
     <p>Butler is designed to operate entirely on your local device. We do not collect, store on our servers, or transmit any personal information or usage data from you.</p>
-    <p>The Extension may process and store the following types of information locally on your computer using your browser's storage mechanisms (such as `chrome.storage.local` or `chrome.storage.sync` for settings):</p>
+    <p>The Extension may process and store the following types of information locally on your computer using your browser's storage mechanisms (such as <code>chrome.storage.local</code> or <code>chrome.storage.sync</code> for settings):</p>
     <ul>
         <li><strong>User-Provided Data:</strong> Any text or queries you type into the Extension's search bar for the purpose of using its features (e.g., searching tabs, history, bookmarks). This data is processed locally to provide search results and is not transmitted off your device by the Extension.</li>
-        <li><strong>Extension Settings and Preferences:</strong> Configuration settings you choose for the Extension (e.g., which search categories are enabled, theme preferences) are stored locally. If you have Chrome sync enabled, these settings may be synced across your devices via Google's `chrome.storage.sync` API, subject to Google's privacy policy.</li>
+        <li><strong>Extension Settings and Preferences:</strong> Configuration settings you choose for the Extension (e.g., which search categories are enabled, theme preferences) are stored locally. If you have Chrome sync enabled, these settings may be synced across your devices via Google's <code>chrome.storage.sync</code> API, subject to Google's privacy policy.</li>
         <li><strong>Browser Data Accessed via Chrome APIs:</strong> To perform its functions, the Extension requests permissions to access certain browser data locally via Chrome Extension APIs. This may include:
             <ul>
-                <li>`chrome.tabs`: To list, search, and interact with your open tabs.</li>
-                <li>`chrome.history`: To search your browsing history.</li>
-                <li>`chrome.bookmarks`: To search your bookmarks.</li>
+                <li><code>chrome.tabs</code>: To list, search, and interact with your open tabs.</li>
+                <li><code>chrome.history</code>: To search your browsing history.</li>
+                <li><code>chrome.bookmarks</code>: To search your bookmarks.</li>
             </ul>
         This data is read from your browser and processed locally by the Extension to provide its features. It is not sent to our servers or any third party by the Extension.</li>
     </ul>
@@ -60,30 +68,30 @@
     <ul>
         <li>To provide, operate, and maintain the core functionality of our Extension (e.g., searching your tabs, bookmarks, and history).</li>
         <li>To personalize your experience within the Extension based on your locally stored settings.</li>
-        <li>To enable synchronization of your Extension settings across your devices if you have enabled Chrome's sync feature (via `chrome.storage.sync`).</li>
+        <li>To enable synchronization of your Extension settings across your devices if you have enabled Chrome's sync feature (via <code>chrome.storage.sync</code>).</li>
     </ul>
     <p>The Extension does not transmit this information to us or any third parties.</p>
 
     <h2>4. Will Your Information Be Shared With Anyone?</h2>
     <p><strong>No.</strong></p>
     <p>Butler does not collect your personal information, so there is nothing for us to share or sell.</p>
-    <p>All data the Extension interacts with (such as your browsing history, bookmarks, open tabs, or settings) is processed and stored locally on your device or, in the case of settings sync, managed by your Google Account via `chrome.storage.sync`.</p>
+    <p>All data the Extension interacts with (such as your browsing history, bookmarks, open tabs, or settings) is processed and stored locally on your device or, in the case of settings sync, managed by your Google Account via <code>chrome.storage.sync</code>.</p>
     <p>We do not have access to this data.</p>
 
     <h2>5. How Do We Keep Your Information Secure?</h2>
     <p>Since Butler does not collect or store your personal information on our servers, the security of your data primarily relies on the security of your own device and your browser.</p>
-    <p>Information stored locally by the Extension (using `chrome.storage.local` or `chrome.storage.sync`) is protected by the security measures of your web browser and operating system.</p>
-    <p>For settings synced via `chrome.storage.sync`, the security of that data during synchronization and storage on Google's servers is handled by Google, according to their privacy and security policies.</p>
+    <p>Information stored locally by the Extension (using <code>chrome.storage.local</code> or <code>chrome.storage.sync</code>) is protected by the security measures of your web browser and operating system.</p>
+    <p>For settings synced via <code>chrome.storage.sync</code>, the security of that data during synchronization and storage on Google's servers is handled by Google, according to their privacy and security policies.</p>
     <p>We encourage you to maintain good security practices for your device and browser, such as using strong passwords, keeping your software updated, and being cautious about other extensions or software you install.</p>
 
     <h2>6. How Long Do We Keep Your Information?</h2>
     <p>Butler does not collect or store your personal information on our servers. Therefore, we do not have a retention period for such data.</p>
-    <p>Any data stored locally by the Extension on your device (e.g., settings via `chrome.storage.local`, cached data for performance) remains on your device until:</p>
+    <p>Any data stored locally by the Extension on your device (e.g., settings via <code>chrome.storage.local</code>, cached data for performance) remains on your device until:</p>
     <ul>
         <li>You clear your browser's cache or the Extension's specific storage.</li>
         <li>You uninstall the Extension.</li>
     </ul>
-    <p>For data synced using `chrome.storage.sync` (like your Extension settings), this data is managed by your Google Account and is subject to Google's data retention policies. You can typically manage or delete this synced data through your Google Account settings.</p>
+    <p>For data synced using <code>chrome.storage.sync</code> (like your Extension settings), this data is managed by your Google Account and is subject to Google's data retention policies. You can typically manage or delete this synced data through your Google Account settings.</p>
 
     <h2>7. What Are Your Privacy Rights?</h2>
     <p>Since we do not collect or store your personal information, traditional privacy rights such as access, rectification, or erasure requests to us are generally not applicable as we hold no data about you.</p>
@@ -91,7 +99,7 @@
     <ul>
         <li>Clear the Extension's local storage through your browser's settings.</li>
         <li>Uninstall the Extension to remove all locally stored data associated with it.</li>
-        <li>Manage settings synced via `chrome.storage.sync` through your Google Account.</li>
+        <li>Manage settings synced via <code>chrome.storage.sync</code> through your Google Account.</li>
     </ul>
     <p>If you have questions or comments about your privacy in relation to the Butler extension, you may contact us by opening an issue at <a href="https://github.com/kkweon/butler/issues/new">https://github.com/kkweon/butler/issues/new</a>.</p>
 
