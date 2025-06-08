@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { ChromeService } from './chrome.service'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
+import { createBaseBrowserActions } from './browser-actions'
 
 describe('AppComponent', () => {
   let component: AppComponent
@@ -488,17 +489,14 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      const copyUrlAction = {
-        name: 'Copy URL',
-        action: async () => {
-          const activeTab = await mockChromeService.getCurrentActiveTab()
-          if (activeTab && activeTab.url) {
-            await mockChromeService.copyToClipboard(activeTab.url)
-          }
-        },
-      }
+      // Use the actual browser action from the factory function
+      const baseBrowserActions = createBaseBrowserActions(mockChromeService)
+      const copyUrlAction = baseBrowserActions.find(
+        (action) => action.name === 'Copy URL',
+      )
 
-      await component.onClickItem(copyUrlAction)
+      expect(copyUrlAction).toBeDefined()
+      await component.onClickItem(copyUrlAction!)
 
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.copyToClipboard).toHaveBeenCalledWith(
@@ -530,17 +528,14 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      const copyUrlAction = {
-        name: 'Copy URL',
-        action: async () => {
-          const activeTab = await mockChromeService.getCurrentActiveTab()
-          if (activeTab && activeTab.url) {
-            await mockChromeService.copyToClipboard(activeTab.url)
-          }
-        },
-      }
+      // Use the actual browser action from the factory function
+      const baseBrowserActions = createBaseBrowserActions(mockChromeService)
+      const copyUrlAction = baseBrowserActions.find(
+        (action) => action.name === 'Copy URL',
+      )
 
-      await component.onClickItem(copyUrlAction)
+      expect(copyUrlAction).toBeDefined()
+      await component.onClickItem(copyUrlAction!)
 
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.copyToClipboard).not.toHaveBeenCalled()
@@ -551,14 +546,14 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      const moveToFirstAction = {
-        name: 'Move current tab to first',
-        action: async () => {
-          await mockChromeService.moveCurrentTabToFirst()
-        },
-      }
+      // Use the actual browser action from the factory function
+      const baseBrowserActions = createBaseBrowserActions(mockChromeService)
+      const moveToFirstAction = baseBrowserActions.find(
+        (action) => action.name === 'Move current tab to first',
+      )
 
-      await component.onClickItem(moveToFirstAction)
+      expect(moveToFirstAction).toBeDefined()
+      await component.onClickItem(moveToFirstAction!)
 
       expect(mockChromeService.moveCurrentTabToFirst).toHaveBeenCalled()
     })
@@ -568,14 +563,14 @@ describe('AppComponent', () => {
 
       await component.ngOnInit()
 
-      const moveToLastAction = {
-        name: 'Move current tab to last',
-        action: async () => {
-          await mockChromeService.moveCurrentTabToLast()
-        },
-      }
+      // Use the actual browser action from the factory function
+      const baseBrowserActions = createBaseBrowserActions(mockChromeService)
+      const moveToLastAction = baseBrowserActions.find(
+        (action) => action.name === 'Move current tab to last',
+      )
 
-      await component.onClickItem(moveToLastAction)
+      expect(moveToLastAction).toBeDefined()
+      await component.onClickItem(moveToLastAction!)
 
       expect(mockChromeService.moveCurrentTabToLast).toHaveBeenCalled()
     })
