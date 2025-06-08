@@ -22,7 +22,7 @@ import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 import { BrowserAction, SearchResult, CombinedResults } from './models'
-import { filterUniqueValues, isBrowserAction } from './utils'
+import { filterUniqueValues, isBrowserAction, normalizeUrl } from './utils'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
@@ -185,6 +185,43 @@ export class AppComponent implements OnInit {
           const activeTab = await this.chromeService.getCurrentActiveTab()
           if (activeTab && activeTab.url) {
             await this.chromeService.copyToClipboard(activeTab.url)
+          }
+        },
+      },
+      {
+        name: 'Close duplicate tabs',
+        action: async () => {
+          const tabs = await this.chromeService.tabsQuery({
+            currentWindow: true,
+            // Respect pinned tabs - only close unpinned duplicates
+            pinned: false,
+          })
+
+          // Group tabs by normalized URL (without query strings and fragments)
+          const tabGroups = new Map<string, chrome.tabs.Tab[]>()
+
+          for (const tab of tabs) {
+            const normalizedUrl = normalizeUrl(tab.url)
+            if (normalizedUrl) {
+              if (!tabGroups.has(normalizedUrl)) {
+                tabGroups.set(normalizedUrl, [])
+              }
+              tabGroups.get(normalizedUrl)!.push(tab)
+            }
+          }
+
+          // Collect tab IDs to close (all duplicates except the first in each group)
+          const tabIdsToClose: number[] = []
+          for (const [normalizedUrl, tabGroup] of tabGroups) {
+            if (tabGroup.length > 1) {
+              // Keep the first tab, close the rest
+              const duplicateTabs = tabGroup.slice(1)
+              tabIdsToClose.push(...duplicateTabs.map((tab) => tab.id))
+            }
+          }
+
+          if (tabIdsToClose.length > 0) {
+            await this.chromeService.tabsRemove(tabIdsToClose)
           }
         },
       },

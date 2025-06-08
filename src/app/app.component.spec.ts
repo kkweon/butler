@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { ChromeService } from './chrome.service'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
+import { normalizeUrl } from './utils'
 
 describe('AppComponent', () => {
   let component: AppComponent
@@ -542,6 +543,293 @@ describe('AppComponent', () => {
 
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.copyToClipboard).not.toHaveBeenCalled()
+    })
+
+    it('should execute "Close duplicate tabs" action correctly', async () => {
+      // Setup mock tabs with duplicates (same normalized URL)
+      const mockTabs: chrome.tabs.Tab[] = [
+        {
+          id: 1,
+          index: 0,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://example.com/page?query=1',
+          title: 'Tab 1',
+        },
+        {
+          id: 2,
+          index: 1,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: true,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://example.com/page#fragment',
+          title: 'Tab 2 (duplicate)',
+        },
+        {
+          id: 3,
+          index: 2,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://example.com/page',
+          title: 'Tab 3 (duplicate)',
+        },
+        {
+          id: 4,
+          index: 3,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://different.com/page',
+          title: 'Tab 4 (unique)',
+        },
+      ]
+
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(mockTabs))
+      mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
+
+      await component.ngOnInit()
+
+      // Create the close duplicate tabs action
+      const closeDuplicateTabsAction = {
+        name: 'Close duplicate tabs',
+        action: async () => {
+          const tabs = await mockChromeService.tabsQuery({
+            currentWindow: true,
+            pinned: false,
+          })
+
+          // Group tabs by normalized URL
+          const tabGroups = new Map<string, chrome.tabs.Tab[]>()
+
+          for (const tab of tabs) {
+            const normalizedUrl = tab.url ? normalizeUrl(tab.url) : ''
+            if (normalizedUrl) {
+              if (!tabGroups.has(normalizedUrl)) {
+                tabGroups.set(normalizedUrl, [])
+              }
+              tabGroups.get(normalizedUrl)!.push(tab)
+            }
+          }
+
+          // Collect tab IDs to close
+          const tabIdsToClose: number[] = []
+          for (const [normalizedUrl, tabGroup] of tabGroups) {
+            if (tabGroup.length > 1) {
+              const duplicateTabs = tabGroup.slice(1)
+              tabIdsToClose.push(...duplicateTabs.map((tab) => tab.id))
+            }
+          }
+
+          if (tabIdsToClose.length > 0) {
+            await mockChromeService.tabsRemove(tabIdsToClose)
+          }
+        },
+      }
+
+      await component.onClickItem(closeDuplicateTabsAction)
+
+      expect(mockChromeService.tabsQuery).toHaveBeenCalledWith({
+        currentWindow: true,
+        pinned: false,
+      })
+      // Should remove tabs 2 and 3 (duplicates of tab 1), keeping tab 1 and tab 4
+      expect(mockChromeService.tabsRemove).toHaveBeenCalledWith([2, 3])
+    })
+
+    it('should handle "Close duplicate tabs" action with no duplicates', async () => {
+      // Setup mock tabs with no duplicates
+      const mockTabs: chrome.tabs.Tab[] = [
+        {
+          id: 1,
+          index: 0,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://example.com/page1',
+          title: 'Tab 1',
+        },
+        {
+          id: 2,
+          index: 1,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: true,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://example.com/page2',
+          title: 'Tab 2',
+        },
+      ]
+
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(mockTabs))
+      mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
+
+      await component.ngOnInit()
+
+      // Create the close duplicate tabs action
+      const closeDuplicateTabsAction = {
+        name: 'Close duplicate tabs',
+        action: async () => {
+          const tabs = await mockChromeService.tabsQuery({
+            currentWindow: true,
+            pinned: false,
+          })
+
+          const tabGroups = new Map<string, chrome.tabs.Tab[]>()
+
+          for (const tab of tabs) {
+            const normalizedUrl = tab.url ? normalizeUrl(tab.url) : ''
+            if (normalizedUrl) {
+              if (!tabGroups.has(normalizedUrl)) {
+                tabGroups.set(normalizedUrl, [])
+              }
+              tabGroups.get(normalizedUrl)!.push(tab)
+            }
+          }
+
+          const tabIdsToClose: number[] = []
+          for (const [normalizedUrl, tabGroup] of tabGroups) {
+            if (tabGroup.length > 1) {
+              const duplicateTabs = tabGroup.slice(1)
+              tabIdsToClose.push(...duplicateTabs.map((tab) => tab.id))
+            }
+          }
+
+          if (tabIdsToClose.length > 0) {
+            await mockChromeService.tabsRemove(tabIdsToClose)
+          }
+        },
+      }
+
+      await component.onClickItem(closeDuplicateTabsAction)
+
+      expect(mockChromeService.tabsQuery).toHaveBeenCalledWith({
+        currentWindow: true,
+        pinned: false,
+      })
+      // Should not remove any tabs since there are no duplicates
+      expect(mockChromeService.tabsRemove).not.toHaveBeenCalled()
+    })
+
+    it('should handle "Close duplicate tabs" action with tabs without URLs', async () => {
+      // Setup mock tabs with some having undefined URLs
+      const mockTabs: chrome.tabs.Tab[] = [
+        {
+          id: 1,
+          index: 0,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: false,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: undefined,
+          title: 'Tab 1 (no URL)',
+        },
+        {
+          id: 2,
+          index: 1,
+          groupId: -1,
+          pinned: false,
+          highlighted: false,
+          windowId: 1,
+          active: true,
+          incognito: false,
+          selected: false,
+          discarded: false,
+          autoDiscardable: true,
+          url: 'https://example.com/page',
+          title: 'Tab 2',
+        },
+      ]
+
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(mockTabs))
+      mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
+
+      await component.ngOnInit()
+
+      // Create the close duplicate tabs action
+      const closeDuplicateTabsAction = {
+        name: 'Close duplicate tabs',
+        action: async () => {
+          const tabs = await mockChromeService.tabsQuery({
+            currentWindow: true,
+            pinned: false,
+          })
+
+          const tabGroups = new Map<string, chrome.tabs.Tab[]>()
+
+          for (const tab of tabs) {
+            const normalizedUrl = tab.url ? normalizeUrl(tab.url) : ''
+            if (normalizedUrl) {
+              if (!tabGroups.has(normalizedUrl)) {
+                tabGroups.set(normalizedUrl, [])
+              }
+              tabGroups.get(normalizedUrl)!.push(tab)
+            }
+          }
+
+          const tabIdsToClose: number[] = []
+          for (const [normalizedUrl, tabGroup] of tabGroups) {
+            if (tabGroup.length > 1) {
+              const duplicateTabs = tabGroup.slice(1)
+              tabIdsToClose.push(...duplicateTabs.map((tab) => tab.id))
+            }
+          }
+
+          if (tabIdsToClose.length > 0) {
+            await mockChromeService.tabsRemove(tabIdsToClose)
+          }
+        },
+      }
+
+      await component.onClickItem(closeDuplicateTabsAction)
+
+      expect(mockChromeService.tabsQuery).toHaveBeenCalledWith({
+        currentWindow: true,
+        pinned: false,
+      })
+      // Should not remove any tabs since tab with undefined URL is ignored and there's only one valid tab
+      expect(mockChromeService.tabsRemove).not.toHaveBeenCalled()
     })
   })
 })
