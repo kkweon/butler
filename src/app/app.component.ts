@@ -188,6 +188,18 @@ export class AppComponent implements OnInit {
           }
         },
       },
+      {
+        name: 'Move current tab to first',
+        action: async () => {
+          await this.chromeService.moveCurrentTabToFirst()
+        },
+      },
+      {
+        name: 'Move current tab to last',
+        action: async () => {
+          await this.chromeService.moveCurrentTabToLast()
+        },
+      },
     ]
   }
 

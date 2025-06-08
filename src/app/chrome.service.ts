@@ -171,6 +171,68 @@ export class ChromeService {
     }
   }
 
+  async moveCurrentTabToFirst(): Promise<void> {
+    try {
+      const activeTab = await this.getCurrentActiveTab()
+      if (!activeTab || !activeTab.id || activeTab.windowId === undefined) {
+        throw new Error('No active tab found')
+      }
+
+      const tabs = await this.tabsQuery({ windowId: activeTab.windowId })
+      const pinnedTabs = tabs.filter((tab) => tab.pinned)
+      const unpinnedTabs = tabs.filter((tab) => !tab.pinned)
+
+      let targetIndex: number
+
+      if (activeTab.pinned) {
+        // Move to first position among pinned tabs
+        targetIndex = 0
+      } else {
+        // Move to first position among unpinned tabs (after all pinned tabs)
+        targetIndex = pinnedTabs.length
+      }
+
+      // Only move if the tab is not already at the target position
+      if (activeTab.index !== targetIndex) {
+        await this.tabsMove(activeTab.id, { index: targetIndex })
+      }
+    } catch (error) {
+      console.error('Failed to move current tab to first position:', error)
+      throw error
+    }
+  }
+
+  async moveCurrentTabToLast(): Promise<void> {
+    try {
+      const activeTab = await this.getCurrentActiveTab()
+      if (!activeTab || !activeTab.id || activeTab.windowId === undefined) {
+        throw new Error('No active tab found')
+      }
+
+      const tabs = await this.tabsQuery({ windowId: activeTab.windowId })
+      const pinnedTabs = tabs.filter((tab) => tab.pinned)
+      const unpinnedTabs = tabs.filter((tab) => !tab.pinned)
+
+      let targetIndex: number
+
+      if (activeTab.pinned) {
+        // Move to last position among pinned tabs
+        targetIndex = pinnedTabs.length - 1
+      } else {
+        // Move to last position among all tabs
+        targetIndex = tabs.length - 1
+      }
+
+      // Only move if the tab is not already at the target position
+      if (activeTab.index !== targetIndex) {
+        await this.tabsMove(activeTab.id, { index: targetIndex })
+      }
+    } catch (error) {
+      console.error('Failed to move current tab to last position:', error)
+      throw error
+    }
+  }
+
   async sortTabsInAllWindows(): Promise<void> {
     try {
       const windows = await this.getAllWindows()

@@ -27,6 +27,8 @@ describe('AppComponent', () => {
       'getCurrentActiveTab',
       'copyToClipboard',
       'bookmarksSearch',
+      'moveCurrentTabToFirst',
+      'moveCurrentTabToLast',
     ])
 
     const chromeSharedOptionsServiceSpy = jasmine.createSpyObj(
@@ -542,6 +544,59 @@ describe('AppComponent', () => {
 
       expect(mockChromeService.getCurrentActiveTab).toHaveBeenCalled()
       expect(mockChromeService.copyToClipboard).not.toHaveBeenCalled()
+    })
+
+    it('should execute "Move current tab to first" action correctly', async () => {
+      mockChromeService.moveCurrentTabToFirst.and.returnValue(Promise.resolve())
+
+      await component.ngOnInit()
+
+      const moveToFirstAction = {
+        name: 'Move current tab to first',
+        action: async () => {
+          await mockChromeService.moveCurrentTabToFirst()
+        },
+      }
+
+      await component.onClickItem(moveToFirstAction)
+
+      expect(mockChromeService.moveCurrentTabToFirst).toHaveBeenCalled()
+    })
+
+    it('should execute "Move current tab to last" action correctly', async () => {
+      mockChromeService.moveCurrentTabToLast.and.returnValue(Promise.resolve())
+
+      await component.ngOnInit()
+
+      const moveToLastAction = {
+        name: 'Move current tab to last',
+        action: async () => {
+          await mockChromeService.moveCurrentTabToLast()
+        },
+      }
+
+      await component.onClickItem(moveToLastAction)
+
+      expect(mockChromeService.moveCurrentTabToLast).toHaveBeenCalled()
+    })
+
+    it('should include "Move current tab to first" and "Move current tab to last" actions in base actions', async () => {
+      await component.ngOnInit()
+
+      // Get all browser actions
+      const browserActions = (component as any)._getBaseBrowserActions()
+
+      const moveToFirstAction = browserActions.find(
+        (action: any) => action.name === 'Move current tab to first',
+      )
+      const moveToLastAction = browserActions.find(
+        (action: any) => action.name === 'Move current tab to last',
+      )
+
+      expect(moveToFirstAction).toBeDefined()
+      expect(moveToLastAction).toBeDefined()
+      expect(typeof moveToFirstAction.action).toBe('function')
+      expect(typeof moveToLastAction.action).toBe('function')
     })
   })
 })
