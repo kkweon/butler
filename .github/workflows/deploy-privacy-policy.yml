@@ -5,7 +5,7 @@ on:
     branches:
       - main # Or your default branch
     paths:
-      - 'sites/privacy-policy.html'
+      - 'sites/**'
 
 jobs:
   deploy:
