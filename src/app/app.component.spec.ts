@@ -91,13 +91,18 @@ describe('AppComponent', () => {
     chromeServiceSpy.historySearch.and.returnValue(Promise.resolve([]))
     chromeServiceSpy.bookmarksSearch.and.returnValue(Promise.resolve([]))
 
-    // Mock browser actions service to return default actions
-    browserActionsServiceSpy.getBrowserActions.and.returnValue(
-      Promise.resolve([
-        { name: 'Test Action 1', action: async () => {} },
-        { name: 'Test Action 2', action: async () => {} },
-      ]),
+    // Create real browser actions service instance to get actual actions
+    const realBrowserActionsService = new BrowserActionsService(
+      chromeServiceSpy,
     )
+
+    // Mock browser actions service to return actual browser actions
+    browserActionsServiceSpy.getBrowserActions.and.callFake(async () => {
+      return await realBrowserActionsService.getBrowserActions()
+    })
+    browserActionsServiceSpy.getBaseBrowserActions.and.callFake(() => {
+      return realBrowserActionsService.getBaseBrowserActions()
+    })
 
     TestBed.configureTestingModule({
       imports: [
