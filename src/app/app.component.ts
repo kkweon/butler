@@ -250,7 +250,9 @@ export class AppComponent implements OnInit {
   }
 
   private _initializeTabsStream(
-    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<infer U>
+    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<
+      infer U
+    >
       ? U
       : never,
   ): Observable<SearchResult[]> {
@@ -286,7 +288,9 @@ export class AppComponent implements OnInit {
   }
 
   private _initializeHistoryStream(
-    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<infer U>
+    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<
+      infer U
+    >
       ? U
       : never,
   ): Observable<SearchResult[]> {
@@ -326,7 +330,9 @@ export class AppComponent implements OnInit {
   }
 
   private _initializeBookmarksStream(
-    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<infer U>
+    options: ChromeSharedOptionsService['getOptions'] extends () => Promise<
+      infer U
+    >
       ? U
       : never,
   ): Observable<SearchResult[]> {
