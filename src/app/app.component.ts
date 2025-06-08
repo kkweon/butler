@@ -21,6 +21,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
+import { BrowserActionsService } from './browser-actions.service'
 import { BrowserAction, SearchResult, CombinedResults } from './models'
 import { filterUniqueValues, isBrowserAction } from './utils'
 import Tab = chrome.tabs.Tab
@@ -60,6 +61,7 @@ export class AppComponent implements OnInit {
   constructor(
     private chromeService: ChromeService,
     private chromeSharedOptionsService: ChromeSharedOptionsService,
+    private browserActionsService: BrowserActionsService,
   ) {}
 
   get selectedIndex(): number {
@@ -131,106 +133,13 @@ export class AppComponent implements OnInit {
     this.hasAnyResults$ = this.totalResults$.pipe(map((total) => total > 0))
   }
 
-  private _getBaseBrowserActions(): BrowserAction[] {
-    return [
-      {
-        name: 'Close other tabs',
-        action: async () => {
-          const tabs = await this.chromeService.tabsQuery({
-            currentWindow: true,
-            // Respect pinned
-            pinned: false,
-          })
-          await this.chromeService.tabsRemove(
-            tabs.filter((tab) => !tab.active).map((tab) => tab.id),
-          )
-        },
-      },
-      {
-        name: 'Close tabs to the right',
-        action: async () => {
-          const currentTab = await this.chromeService.getCurrentActiveTab()
-          const tabs = await this.chromeService.tabsQuery({
-            currentWindow: true,
-            pinned: false,
-          })
-
-          const findIndex = tabs.findIndex((t) => t.id === currentTab.id)
-          if (findIndex === -1) {
-            // do nothing
-            return
-          }
-
-          const tabIds = tabs.slice(findIndex + 1).map((t) => t.id)
-          if (0 < tabIds.length) {
-            await this.chromeService.tabsRemove(tabIds)
-          }
-        },
-      },
-      {
-        name: 'Open settings',
-        action: async () => {
-          await this.chromeService.openSettings()
-        },
-      },
-      {
-        name: 'Sort tabs by domain',
-        action: async () => {
-          await this.chromeService.sortTabsInAllWindows()
-        },
-      },
-      {
-        name: 'Copy URL',
-        action: async () => {
-          const activeTab = await this.chromeService.getCurrentActiveTab()
-          if (activeTab && activeTab.url) {
-            await this.chromeService.copyToClipboard(activeTab.url)
-          }
-        },
-      },
-    ]
-  }
-
-  private async _getBrowserActions(): Promise<BrowserAction[]> {
-    const baseActions = this._getBaseBrowserActions()
-
-    try {
-      const activeTab = await this.chromeService.getCurrentActiveTab()
-
-      // Add pin/unpin action at the beginning if we can get tab state
-      const pinAction: BrowserAction = {
-        name: activeTab?.pinned
-          ? 'Unpin the current tab'
-          : 'Pin the current tab',
-        action: async () => {
-          try {
-            const currentTab = await this.chromeService.getCurrentActiveTab()
-            if (currentTab?.id) {
-              await this.chromeService.toggleTabPin(
-                currentTab.id,
-                !currentTab.pinned,
-              )
-            }
-          } catch (error) {
-            console.error('Failed to toggle tab pin state:', error)
-          }
-        },
-      }
-
-      return [pinAction, ...baseActions]
-    } catch (error) {
-      console.error('Failed to get current tab state:', error)
-      // Return only base actions if we can't get tab state
-      return baseActions
-    }
-  }
-
   private _initializeActionsStream(): Observable<BrowserAction[]> {
     return this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap(async (searchInputText: string) => {
         try {
-          const browserActions = await this._getBrowserActions() // Get actions first
+          const browserActions =
+            await this.browserActionsService.getBrowserActions() // Get actions from service
           if (!searchInputText) {
             return browserActions // Return all actions if input is empty
           }
