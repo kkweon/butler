@@ -21,9 +21,9 @@ import { MatIconModule } from '@angular/material/icon'
 import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
+import { BrowserActionsService } from './browser-actions.service'
 import { BrowserAction, SearchResult, CombinedResults } from './models'
 import { filterUniqueValues, isBrowserAction } from './utils'
-import { BrowserActionsService } from './browser-actions.service'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
@@ -133,16 +133,13 @@ export class AppComponent implements OnInit {
     this.hasAnyResults$ = this.totalResults$.pipe(map((total) => total > 0))
   }
 
-  private async _getBrowserActions(): Promise<BrowserAction[]> {
-    return await this.browserActionsService.getBrowserActions()
-  }
-
   private _initializeActionsStream(): Observable<BrowserAction[]> {
     return this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap(async (searchInputText: string) => {
         try {
-          const browserActions = await this._getBrowserActions() // Get actions first
+          const browserActions =
+            await this.browserActionsService.getBrowserActions() // Get actions from service
           if (!searchInputText) {
             return browserActions // Return all actions if input is empty
           }
