@@ -1,11 +1,11 @@
 import Fuse from 'fuse.js'
 
-// Common Fuse.js options
-const DEFAULT_FUSE_OPTIONS: Fuse.IFuseOptions<unknown> = {
+// Common Fuse.js properties (non-generic parts)
+const COMMON_FUSE_PROPERTIES = {
   isCaseSensitive: false,
   threshold: 0.45,
   ignoreLocation: true,
-}
+};
 
 /**
  * Creates a new Fuse.js instance with common options.
@@ -17,8 +17,9 @@ export function createFuseInstance<T>(
   list: ReadonlyArray<T>,
   keys: string[],
 ): Fuse<T> {
-  return new Fuse(list, {
-    ...DEFAULT_FUSE_OPTIONS,
+  const options: Fuse.IFuseOptions<T> = {
+    ...COMMON_FUSE_PROPERTIES,
     keys,
-  })
+  };
+  return new Fuse(list, options);
 }
