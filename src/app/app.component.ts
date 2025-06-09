@@ -148,6 +148,7 @@ export class AppComponent implements OnInit {
             isCaseSensitive: false,
             keys: ['name'],
             threshold: 0.3,
+            ignoreLocation: true,
           })
             .search(searchInputText)
             .map((value) => value.item)
@@ -180,6 +181,7 @@ export class AppComponent implements OnInit {
               keys: ['title', 'url'],
               isCaseSensitive: false,
               threshold: 0.3,
+              ignoreLocation: true,
             })
             const searchResults = fuse.search(searchInputText || '') // Ensure text is not null
 
@@ -264,6 +266,7 @@ export class AppComponent implements OnInit {
               keys: ['title', 'url'],
               isCaseSensitive: false,
               threshold: 0.3,
+              ignoreLocation: true,
             })
 
             return fuse
