@@ -147,7 +147,7 @@ export class AppComponent implements OnInit {
           return new Fuse<BrowserAction>(browserActions, {
             isCaseSensitive: false,
             keys: ['name'],
-            threshold: 0.3,
+            threshold: 0.45,
             ignoreLocation: true,
           })
             .search(searchInputText)
@@ -180,7 +180,7 @@ export class AppComponent implements OnInit {
             const fuse = new Fuse<Tab>(tabs, {
               keys: ['title', 'url'],
               isCaseSensitive: false,
-              threshold: 0.3,
+              threshold: 0.45,
               ignoreLocation: true,
             })
             const searchResults = fuse.search(searchInputText || '') // Ensure text is not null
@@ -265,7 +265,7 @@ export class AppComponent implements OnInit {
             const fuse = new Fuse<BookmarkTreeNode>(bookmarkItems, {
               keys: ['title', 'url'],
               isCaseSensitive: false,
-              threshold: 0.3,
+              threshold: 0.45,
               ignoreLocation: true,
             })
 
