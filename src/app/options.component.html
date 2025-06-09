@@ -27,6 +27,17 @@
   </section>
 
   <section class="options-section">
+    <h2>Tab Management</h2>
+    <div class="option-item">
+      <mat-slide-toggle
+        [checked]="sortPinnedTabs"
+        (change)="toggleSortPinnedTabs($event)"
+        >Sort pinned tabs when sorting by domain</mat-slide-toggle
+      >
+    </div>
+  </section>
+
+  <section class="options-section">
     <h2>History Settings</h2>
     <mat-form-field appearance="fill" class="date-picker-field">
       <mat-label>Start date for searching history</mat-label>

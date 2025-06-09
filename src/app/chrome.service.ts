@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core'
+import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 
 @Injectable({
   providedIn: 'root',
 })
 export class ChromeService {
-  constructor() {}
+  constructor(private chromeSharedOptionsService: ChromeSharedOptionsService) {}
 
   getCurrentWindow(): Promise<chrome.windows.Window> {
     return new Promise((resolve) => {
@@ -235,7 +236,10 @@ export class ChromeService {
 
   async sortTabsInAllWindows(): Promise<void> {
     try {
-      const windows = await this.getAllWindows()
+      const [options, windows] = await Promise.all([
+        this.chromeSharedOptionsService.getOptions(),
+        this.getAllWindows(),
+      ])
 
       for (const window of windows) {
         try {
@@ -266,7 +270,10 @@ export class ChromeService {
             return urlA.toLowerCase().localeCompare(urlB.toLowerCase())
           }
 
-          pinnedTabs.sort(sortByDomainThenUrl)
+          // Only sort pinned tabs if the option is enabled
+          if (options.sortPinnedTabs) {
+            pinnedTabs.sort(sortByDomainThenUrl)
+          }
           unpinnedTabs.sort(sortByDomainThenUrl)
 
           // Combine: pinned first, then unpinned

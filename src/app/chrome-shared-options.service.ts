@@ -16,6 +16,8 @@ export interface ChromeSharedOptions {
    * A value of 0 typically means searching all history.
    */
   searchHistoryStartDateInUnixEpoch: number
+  /** Whether to sort pinned tabs when using the "sort tabs by domain" action. */
+  sortPinnedTabs: boolean
 }
 
 const DEFAULT_CHROME_SHARED_OPTIONS: ChromeSharedOptions = {
@@ -24,6 +26,7 @@ const DEFAULT_CHROME_SHARED_OPTIONS: ChromeSharedOptions = {
   includesTabs: true,
 
   searchHistoryStartDateInUnixEpoch: 0,
+  sortPinnedTabs: false,
 }
 
 @Injectable({
