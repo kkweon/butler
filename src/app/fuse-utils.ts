@@ -5,7 +5,7 @@ const COMMON_FUSE_PROPERTIES = {
   isCaseSensitive: false,
   threshold: 0.45,
   ignoreLocation: true,
-};
+}
 
 /**
  * Creates a new Fuse.js instance with common options.
@@ -20,6 +20,6 @@ export function createFuseInstance<T>(
   const options: Fuse.IFuseOptions<T> = {
     ...COMMON_FUSE_PROPERTIES,
     keys,
-  };
-  return new Fuse(list, options);
+  }
+  return new Fuse(list, options)
 }
