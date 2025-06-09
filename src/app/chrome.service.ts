@@ -236,8 +236,10 @@ export class ChromeService {
 
   async sortTabsInAllWindows(): Promise<void> {
     try {
-      const options = await this.chromeSharedOptionsService.getOptions()
-      const windows = await this.getAllWindows()
+      const [options, windows] = await Promise.all([
+        this.chromeSharedOptionsService.getOptions(),
+        this.getAllWindows(),
+      ])
 
       for (const window of windows) {
         try {
