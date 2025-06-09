@@ -24,6 +24,7 @@ import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 import { BrowserActionsService } from './browser-actions.service'
 import { BrowserAction, SearchResult, CombinedResults } from './models'
 import { filterUniqueValues, isBrowserAction } from './utils'
+import { createFuseInstance } from './fuse-utils'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
@@ -144,12 +145,7 @@ export class AppComponent implements OnInit {
             return browserActions // Return all actions if input is empty
           }
           // If input is not empty, then search
-          return new Fuse<BrowserAction>(browserActions, {
-            isCaseSensitive: false,
-            keys: ['name'],
-            threshold: 0.45,
-            ignoreLocation: true,
-          })
+          return createFuseInstance<BrowserAction>(browserActions, ['name'])
             .search(searchInputText)
             .map((value) => value.item)
         } catch (error) {
@@ -177,12 +173,7 @@ export class AppComponent implements OnInit {
           .tabsQuery({})
           .then((tabs) => {
             // Fuse search; if searchInputText is empty, Fuse returns all items.
-            const fuse = new Fuse<Tab>(tabs, {
-              keys: ['title', 'url'],
-              isCaseSensitive: false,
-              threshold: 0.45,
-              ignoreLocation: true,
-            })
+            const fuse = createFuseInstance<Tab>(tabs, ['title', 'url'])
             const searchResults = fuse.search(searchInputText || '') // Ensure text is not null
 
             return searchResults.map(({ item: tab }) => ({
@@ -262,12 +253,10 @@ export class AppComponent implements OnInit {
             const bookmarkItems = bookmarks.filter((bookmark) => bookmark.url)
 
             // Use Fuse.js for fuzzy search. If searchInputText is "", Fuse returns all items.
-            const fuse = new Fuse<BookmarkTreeNode>(bookmarkItems, {
-              keys: ['title', 'url'],
-              isCaseSensitive: false,
-              threshold: 0.45,
-              ignoreLocation: true,
-            })
+            const fuse = createFuseInstance<BookmarkTreeNode>(bookmarkItems, [
+              'title',
+              'url',
+            ])
 
             return fuse
               .search(searchInputText || '')
