@@ -40,6 +40,7 @@ export class OptionsComponent implements OnInit {
   includesBookmarks: boolean
   includesTabs: boolean
   includesHistory: boolean
+  sortPinnedTabs: boolean
   // YYYY-MM-DD
   startDate: string
 
@@ -50,6 +51,7 @@ export class OptionsComponent implements OnInit {
     this.includesBookmarks = options.includesBookmarks
     this.includesTabs = options.includesTabs
     this.includesHistory = options.includesHistory
+    this.sortPinnedTabs = options.sortPinnedTabs
 
     this.startDate = getYYYYMMDD(options.searchHistoryStartDateInUnixEpoch)
   }
@@ -87,6 +89,14 @@ export class OptionsComponent implements OnInit {
       includesHistory: event.checked,
     })
     this.includesHistory = event.checked
+    return
+  }
+
+  async toggleSortPinnedTabs(event: MatSlideToggleChange): Promise<void> {
+    await this.chromeSharedOptionsService.setOptions({
+      sortPinnedTabs: event.checked,
+    })
+    this.sortPinnedTabs = event.checked
     return
   }
 }

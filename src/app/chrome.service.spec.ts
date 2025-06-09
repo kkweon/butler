@@ -1,13 +1,24 @@
 import { TestBed } from '@angular/core/testing'
 
 import { ChromeService } from './chrome.service'
+import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 
 describe('ChromeService', () => {
   let service: ChromeService
+  let mockChromeSharedOptionsService: jasmine.SpyObj<ChromeSharedOptionsService>
 
   beforeEach(() => {
-    TestBed.configureTestingModule({})
+    const spy = jasmine.createSpyObj('ChromeSharedOptionsService', [
+      'getOptions',
+    ])
+
+    TestBed.configureTestingModule({
+      providers: [{ provide: ChromeSharedOptionsService, useValue: spy }],
+    })
     service = TestBed.inject(ChromeService)
+    mockChromeSharedOptionsService = TestBed.inject(
+      ChromeSharedOptionsService,
+    ) as jasmine.SpyObj<ChromeSharedOptionsService>
   })
 
   it('should be created', () => {
@@ -467,6 +478,17 @@ describe('ChromeService', () => {
         spyOn(service, 'getAllWindows')
         spyOn(service, 'tabsQuery')
         spyOn(service, 'tabsMove')
+
+        // Mock default behavior: sortPinnedTabs is false by default
+        mockChromeSharedOptionsService.getOptions.and.returnValue(
+          Promise.resolve({
+            includesBookmarks: false,
+            includesHistory: true,
+            includesTabs: true,
+            searchHistoryStartDateInUnixEpoch: 0,
+            sortPinnedTabs: false,
+          }),
+        )
       })
 
       it('should sort tabs by domain in each window', async () => {
@@ -615,7 +637,47 @@ describe('ChromeService', () => {
 
         await service.sortTabsInAllWindows()
 
-        // Pinned tabs should be sorted among themselves: a.com, z.com
+        // With default sortPinnedTabs: false, pinned tabs should maintain their order
+        // Only unpinned tabs should be sorted: b.com, m.com
+        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // b.com unpinned to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 3 }) // m.com unpinned to position 3
+
+        // Pinned tabs should not be moved (they already maintain their relative order)
+        expect(service.tabsMove).not.toHaveBeenCalledWith(2, { index: 0 })
+        expect(service.tabsMove).not.toHaveBeenCalledWith(1, { index: 1 })
+      })
+
+      it('should sort pinned tabs when sortPinnedTabs option is enabled', async () => {
+        // Override the default mock to enable sortPinnedTabs
+        mockChromeSharedOptionsService.getOptions.and.returnValue(
+          Promise.resolve({
+            includesBookmarks: false,
+            includesHistory: true,
+            includesTabs: true,
+            searchHistoryStartDateInUnixEpoch: 0,
+            sortPinnedTabs: true,
+          }),
+        )
+
+        const mockWindows = [{ id: 1 }]
+        const mockTabs = [
+          { id: 1, url: 'https://z.com', pinned: true, index: 0 },
+          { id: 2, url: 'https://a.com', pinned: true, index: 1 },
+          { id: 3, url: 'https://m.com', pinned: false, index: 2 },
+          { id: 4, url: 'https://b.com', pinned: false, index: 3 },
+        ]
+
+        ;(service.getAllWindows as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockWindows),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(mockTabs),
+        )
+        ;(service.tabsMove as jasmine.Spy).and.returnValue(Promise.resolve({}))
+
+        await service.sortTabsInAllWindows()
+
+        // With sortPinnedTabs: true, pinned tabs should be sorted among themselves: a.com, z.com
         expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 0 }) // a.com pinned to position 0
         expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 1 }) // z.com pinned to position 1
         // Unpinned tabs should be sorted after pinned: b.com, m.com
