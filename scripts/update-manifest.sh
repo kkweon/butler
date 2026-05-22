@@ -3,21 +3,19 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Define the path to the .env file relative to the script's location
-# Assuming the script is in project_root/scripts/update-manifest.sh
-# and .env is in project_root/.env
-ENV_FILE="$(dirname "$0")/../.env"
+# Define potential paths to the .env file
+PROJECT_ENV="$(dirname "$0")/../.env"
+HOME_ENV="$HOME/.env"
 
-# Check if .env file exists and source it
-if [ -f "$ENV_FILE" ]; then
-  echo "Sourcing environment variables from $ENV_FILE"
-  # Use 'set -a' to export all variables defined in the .env file
-  # and 'set +a' to revert this behavior.
-  # Use a subshell to avoid polluting the current shell's environment
-  # if the script is sourced.
-  (set -a; source "$ENV_FILE"; set +a)
+# Check if .env files exist and source the first one found
+if [ -f "$PROJECT_ENV" ]; then
+  echo "Sourcing environment variables from $PROJECT_ENV"
+  set -a; source "$PROJECT_ENV"; set +a
+elif [ -f "$HOME_ENV" ]; then
+  echo "Sourcing environment variables from $HOME_ENV"
+  set -a; source "$HOME_ENV"; set +a
 else
-  echo "Info: .env file not found at $ENV_FILE. Proceeding with existing environment variables."
+  echo "Info: .env file not found. Proceeding with existing environment variables."
 fi
 
 MANIFEST_PATH="dist/butler/manifest.json"
