@@ -47,15 +47,15 @@ This project uses Angular 20 with a single project structure.
 To develop and test the Butler extension locally, follow these steps:
 
 1.  **Build and Watch:** Run `yarn build --watch` in your terminal. This command compiles the extension and watches for any file changes, rebuilding automatically.
-    *   _Note for specific development setups:_ If you need to automatically update `manifest.json` with an extension key (e.g., for a consistent development ID or private key), use `yarn build:work --watch` instead. This requires the `EXTENSION_MANIFEST_JSON_KEY` environment variable to be set (typically in an `.env` file at the project root), which then triggers `scripts/update-manifest.sh` after each build.
+    - _Note for specific development setups:_ If you need to automatically update `manifest.json` with an extension key (e.g., for a consistent development ID or private key), use `yarn build:work --watch` instead. This requires the `EXTENSION_MANIFEST_JSON_KEY` environment variable to be set (typically in an `.env` file at the project root), which then triggers `scripts/update-manifest.sh` after each build.
 2.  **Output Directory:** The compiled extension files will be located in the `dist/butler` folder.
 3.  **Load Unpacked Extension:**
-    *   Open Chrome and navigate to `chrome://extensions`.
-    *   Enable "Developer mode" (usually a toggle in the top right corner).
-    *   Click on "Load unpacked" and select the `dist/butler` folder.
+    - Open Chrome and navigate to `chrome://extensions`.
+    - Enable "Developer mode" (usually a toggle in the top right corner).
+    - Click on "Load unpacked" and select the `dist/butler` folder.
 4.  **Set Keyboard Shortcut (Recommended):**
-    *   In `chrome://extensions/shortcuts`, find the Butler extension.
-    *   Set a convenient keyboard shortcut (e.g., `Ctrl+K` or `Cmd+K`) to quickly open the extension popup.
+    - In `chrome://extensions/shortcuts`, find the Butler extension.
+    - Set a convenient keyboard shortcut (e.g., `Ctrl+K` or `Cmd+K`) to quickly open the extension popup.
 5.  **Live Development:** With this setup, any changes you make to the source code will trigger a rebuild, and you can test the updated extension by simply reopening it (or by Chrome automatically reloading it, depending on the type of change).
 
 This workflow allows for an efficient live development and testing cycle.
@@ -103,6 +103,37 @@ yarn format
 # Create distributable zip
 yarn zip
 ```
+
+### Automated Publishing (CI/CD)
+
+Butler uses `semantic-release` and `semantic-release-chrome` inside GitHub Actions to automate publishing to the Chrome Web Store.
+
+To configure this automated pipeline, you need to add the following secrets to your GitHub repository (**Settings > Secrets and variables > Actions**):
+
+- `GH_TOKEN`: A GitHub Personal Access Token (PAT) with repository permissions.
+- `GOOGLE_CLIENT_ID`: Your Google APIs Client ID.
+- `GOOGLE_CLIENT_SECRET`: Your Google APIs Client Secret.
+- `GOOGLE_REFRESH_TOKEN`: A long-lived OAuth2 refresh token authorized with the Chrome Web Store APIs.
+
+#### How to Generate the Google OAuth Credentials
+
+1. **Google Cloud Project Setup**:
+
+   - Go to the [Google Cloud Console](https://console.cloud.google.com).
+   - Create a project or select an existing one, and enable the **Chrome Web Store API**.
+   - Set up an **External** OAuth consent screen and add your developer email to the **Test users** list.
+   - Go to **Credentials > Create Credentials > OAuth client ID** and select **Web application**.
+   - Add `https://developers.google.com/oauthplayground` to the **Authorized redirect URIs**.
+   - Save your generated **Client ID** and **Client Secret**.
+
+2. **Generate the Refresh Token**:
+   - Visit the [OAuth 2.0 Playground](https://developers.google.com/oauthplayground).
+   - Click the **Gear icon ⚙️** (top-right corner).
+   - Check **"Use your own OAuth credentials"** and enter your **Client ID** and **Client Secret**.
+   - Under **Step 1 (Select & authorize APIs)**, paste `https://www.googleapis.com/auth/chromewebstore` in the text box and click **Authorize APIs**.
+   - Log in with your developer account and allow the requested access.
+   - Under **Step 2**, click **Exchange authorization code for tokens**.
+   - Copy the generated **Refresh token** and configure it as `GOOGLE_REFRESH_TOKEN` in GitHub Secrets.
 
 ### Architecture
 
