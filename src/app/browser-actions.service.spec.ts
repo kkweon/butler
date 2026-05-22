@@ -62,10 +62,11 @@ describe('BrowserActionsService', () => {
       const actions = service.getBaseBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(8)
+      expect(actions.length).toBe(9)
       expect(actions.map((a) => a.name)).toEqual([
         'Close other tabs',
         'Close tabs to the right',
+        'Close tabs to the left',
         'Open settings',
         'Sort tabs by domain',
         'Copy URL',
@@ -95,7 +96,7 @@ describe('BrowserActionsService', () => {
       const actions = await service.getBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(9) // 8 base + 1 pin action
+      expect(actions.length).toBe(10) // 9 base + 1 pin action
       expect(actions[0].name).toBe('Pin the current tab')
     })
 
@@ -120,7 +121,7 @@ describe('BrowserActionsService', () => {
       const actions = await service.getBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(8) // Only base actions
+      expect(actions.length).toBe(9) // Only base actions
     })
   })
 

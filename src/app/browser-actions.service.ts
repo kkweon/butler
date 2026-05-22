@@ -50,6 +50,27 @@ export class BrowserActionsService {
         },
       },
       {
+        name: 'Close tabs to the left',
+        action: async () => {
+          const currentTab = await this.chromeService.getCurrentActiveTab()
+          const tabs = await this.chromeService.tabsQuery({
+            currentWindow: true,
+            pinned: false,
+          })
+
+          const findIndex = tabs.findIndex((t) => t.id === currentTab.id)
+          if (findIndex === -1) {
+            // do nothing
+            return
+          }
+
+          const tabIds = tabs.slice(0, findIndex).map((t) => t.id)
+          if (0 < tabIds.length) {
+            await this.chromeService.tabsRemove(tabIds)
+          }
+        },
+      },
+      {
         name: 'Open settings',
         action: async () => {
           await this.chromeService.openSettings()
