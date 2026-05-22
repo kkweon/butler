@@ -200,12 +200,14 @@ export class AppComponent implements OnInit {
   ): Observable<SearchResult[]> {
     return this.searchInput.valueChanges.pipe(
       startWith(''),
+      tap(() => {
+        this.isSearchingHistory = true
+      }),
       switchMap((searchInputText: string) => {
         if (!options.includesHistory) {
           return of([]) // Return an observable of empty array
         }
 
-        this.isSearchingHistory = true
         return this.chromeService
           .historySearch({
             text: searchInputText || '', // Ensure text is not null
@@ -221,7 +223,6 @@ export class AppComponent implements OnInit {
           })
           .catch((error) => {
             console.error('Error fetching or searching history:', error)
-            // this.isSearchingHistory will be set to false by the subsequent tap operator
             return [] // Return empty array on error inside the promise
           })
       }),
@@ -230,6 +231,7 @@ export class AppComponent implements OnInit {
       tap(() => {
         this.isSearchingHistory = false // This ensures the flag is reset
       }),
+      startWith([]),
     )
   }
 
@@ -273,6 +275,7 @@ export class AppComponent implements OnInit {
             return [] // Return empty array on error inside the promise
           })
       }),
+      startWith([]),
     )
   }
 
