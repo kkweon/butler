@@ -166,6 +166,9 @@ export class AppComponent implements OnInit {
     return this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap((searchInputText: string) => {
+        if (!searchInputText) {
+          return of([]) // Return empty array if input is empty
+        }
         if (!options.includesTabs) {
           return of([]) // Return an observable of empty array
         }
@@ -204,6 +207,9 @@ export class AppComponent implements OnInit {
         this.isSearchingHistory = true
       }),
       switchMap((searchInputText: string) => {
+        if (!searchInputText) {
+          return of([]) // Return empty array if input is empty
+        }
         if (!options.includesHistory) {
           return of([]) // Return an observable of empty array
         }
@@ -245,6 +251,9 @@ export class AppComponent implements OnInit {
     return this.searchInput.valueChanges.pipe(
       startWith(''),
       switchMap((searchInputText: string) => {
+        if (!searchInputText) {
+          return of([]) // Return empty array if input is empty
+        }
         if (!options.includesBookmarks) {
           return of([]) // Return an observable of empty array
         }
