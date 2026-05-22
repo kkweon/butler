@@ -153,6 +153,9 @@ describe('AppComponent', () => {
       // Set searchInput to a value that would typically produce results.
       component.searchInput.setValue('test')
 
+      fixture.detectChanges()
+      await fixture.whenStable()
+
       // Directly mock `latestResults` for predictable keyboard navigation tests.
       component['latestResults'] = {
         actions: [
@@ -185,9 +188,6 @@ describe('AppComponent', () => {
         ], // 1 history item
       }
       // Total results: 2 + 1 + 1 + 1 = 5
-
-      fixture.detectChanges()
-      await fixture.whenStable()
     })
 
     it('should handle ArrowDown key to navigate results', () => {

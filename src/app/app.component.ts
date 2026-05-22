@@ -7,7 +7,7 @@ import {
 } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
-import { Observable, combineLatest, BehaviorSubject, of } from 'rxjs'
+import { Observable, combineLatest, BehaviorSubject, of, from } from 'rxjs'
 import {
   map,
   switchMap,
@@ -73,22 +73,21 @@ export class AppComponent implements OnInit {
     this.selectedIndexSubject.next(value)
   }
 
-  async ngOnInit(): Promise<void> {
-    const options = await this.chromeSharedOptionsService.getOptions()
-
-    // Initialize individual observables for each result type
-    const actions$ = this._initializeActionsStream()
-    const tabs$ = this._initializeTabsStream(options)
-    const history$ = this._initializeHistoryStream(options)
-    const bookmarks$ = this._initializeBookmarksStream(options)
+  ngOnInit(): void {
+    const options$ = from(this.chromeSharedOptionsService.getOptions()).pipe(
+      shareReplay(1),
+    )
 
     // Combine all results into a single observable
-    this.allResults$ = combineLatest([
-      actions$,
-      tabs$,
-      bookmarks$,
-      history$,
-    ]).pipe(
+    this.allResults$ = options$.pipe(
+      switchMap((options) => {
+        const actions$ = this._initializeActionsStream()
+        const tabs$ = this._initializeTabsStream(options)
+        const history$ = this._initializeHistoryStream(options)
+        const bookmarks$ = this._initializeBookmarksStream(options)
+
+        return combineLatest([actions$, tabs$, bookmarks$, history$])
+      }),
       map(([actions, tabs, bookmarks, history]) => ({
         actions,
         tabs,
@@ -153,6 +152,7 @@ export class AppComponent implements OnInit {
           return []
         }
       }),
+      startWith([]),
     )
   }
 
@@ -191,6 +191,7 @@ export class AppComponent implements OnInit {
             return [] // Return empty array on error inside the promise
           })
       }),
+      startWith([]),
     )
   }
 
