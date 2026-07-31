@@ -36,6 +36,9 @@ describe('BrowserActionsService', () => {
       'tabsRemove',
       'getCurrentActiveTab',
       'openSettings',
+      'openChromeSettings',
+      'openExtensions',
+      'openExtensionShortcuts',
       'sortTabsInAllWindows',
       'copyToClipboard',
       'toggleTabPin',
@@ -62,12 +65,15 @@ describe('BrowserActionsService', () => {
       const actions = service.getBaseBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(9)
+      expect(actions.length).toBe(12)
       expect(actions.map((a) => a.name)).toEqual([
         'Close other tabs',
         'Close tabs to the right',
         'Close tabs to the left',
         'Open settings',
+        'Open Chrome settings',
+        'Open Chrome extensions',
+        'Open Chrome keyboard shortcuts',
         'Sort tabs by domain',
         'Copy URL',
         'Close duplicate tabs',
@@ -96,7 +102,7 @@ describe('BrowserActionsService', () => {
       const actions = await service.getBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(10) // 9 base + 1 pin action
+      expect(actions.length).toBe(13) // 12 base + 1 pin action
       expect(actions[0].name).toBe('Pin the current tab')
     })
 
@@ -121,7 +127,7 @@ describe('BrowserActionsService', () => {
       const actions = await service.getBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(9) // Only base actions
+      expect(actions.length).toBe(12) // Only base actions
     })
   })
 
@@ -225,6 +231,49 @@ describe('BrowserActionsService', () => {
       })
       // Should not remove any tabs since tab with undefined URL is ignored
       expect(mockChromeService.tabsRemove).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Chrome internal page actions', () => {
+    it('should open chrome://settings via ChromeService', async () => {
+      const action = service
+        .getBaseBrowserActions()
+        .find((a) => a.name === 'Open Chrome settings')
+
+      expect(action).toBeDefined()
+      mockChromeService.openChromeSettings.and.returnValue(Promise.resolve())
+
+      await action!.action()
+
+      expect(mockChromeService.openChromeSettings).toHaveBeenCalled()
+    })
+
+    it('should open chrome://extensions via ChromeService', async () => {
+      const action = service
+        .getBaseBrowserActions()
+        .find((a) => a.name === 'Open Chrome extensions')
+
+      expect(action).toBeDefined()
+      mockChromeService.openExtensions.and.returnValue(Promise.resolve())
+
+      await action!.action()
+
+      expect(mockChromeService.openExtensions).toHaveBeenCalled()
+    })
+
+    it('should open chrome://extensions/shortcuts via ChromeService', async () => {
+      const action = service
+        .getBaseBrowserActions()
+        .find((a) => a.name === 'Open Chrome keyboard shortcuts')
+
+      expect(action).toBeDefined()
+      mockChromeService.openExtensionShortcuts.and.returnValue(
+        Promise.resolve(),
+      )
+
+      await action!.action()
+
+      expect(mockChromeService.openExtensionShortcuts).toHaveBeenCalled()
     })
   })
 

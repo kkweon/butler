@@ -97,6 +97,21 @@ export class ChromeService {
     })
   }
 
+  async openChromeSettings(): Promise<void> {
+    await this.tabsCreate({ active: true, url: 'chrome://settings' })
+  }
+
+  async openExtensions(): Promise<void> {
+    await this.tabsCreate({ active: true, url: 'chrome://extensions' })
+  }
+
+  async openExtensionShortcuts(): Promise<void> {
+    await this.tabsCreate({
+      active: true,
+      url: 'chrome://extensions/shortcuts',
+    })
+  }
+
   async tabsUpdate(
     tabId: number,
     updateProperties: chrome.tabs.UpdateProperties,

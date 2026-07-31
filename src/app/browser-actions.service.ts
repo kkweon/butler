@@ -77,6 +77,24 @@ export class BrowserActionsService {
         },
       },
       {
+        name: 'Open Chrome settings',
+        action: async () => {
+          await this.chromeService.openChromeSettings()
+        },
+      },
+      {
+        name: 'Open Chrome extensions',
+        action: async () => {
+          await this.chromeService.openExtensions()
+        },
+      },
+      {
+        name: 'Open Chrome keyboard shortcuts',
+        action: async () => {
+          await this.chromeService.openExtensionShortcuts()
+        },
+      },
+      {
         name: 'Sort tabs by domain',
         action: async () => {
           await this.chromeService.sortTabsInAllWindows()
