@@ -106,34 +106,39 @@ yarn zip
 
 ### Automated Publishing (CI/CD)
 
-Butler uses `semantic-release` and `semantic-release-chrome` inside GitHub Actions to automate publishing to the Chrome Web Store.
+Butler uses `semantic-release` inside GitHub Actions to publish to the Chrome Web Store. Uploading and submitting is handled by `scripts/chrome-webstore.mjs`, which talks to the [Chrome Web Store API v2](https://developer.chrome.com/docs/webstore/api/reference/rest) and authenticates as a **service account**.
 
-To configure this automated pipeline, you need to add the following secrets to your GitHub repository (**Settings > Secrets and variables > Actions**):
+There is deliberately no refresh token in this setup. Refresh tokens issued while an OAuth consent screen is in `Testing` [expire after 7 days](https://developers.google.com/identity/protocols/oauth2), which repeatedly broke releases. A service account mints a short-lived token per run instead, and service accounts are only supported on v2 — v1.1 is switched off on 15 October 2026.
 
-- `GH_TOKEN`: A GitHub Personal Access Token (PAT) with repository permissions.
-- `GOOGLE_CLIENT_ID`: Your Google APIs Client ID.
-- `GOOGLE_CLIENT_SECRET`: Your Google APIs Client Secret.
-- `GOOGLE_REFRESH_TOKEN`: A long-lived OAuth2 refresh token authorized with the Chrome Web Store APIs.
+#### Repository configuration
 
-#### How to Generate the Google OAuth Credentials
+Under **Settings > Secrets and variables > Actions**:
 
-1. **Google Cloud Project Setup**:
+| Kind     | Name                         | Value                                                      |
+| -------- | ---------------------------- | ---------------------------------------------------------- |
+| Secret   | `GOOGLE_SERVICE_ACCOUNT_KEY` | The service account JSON key, pasted whole                 |
+| Variable | `CWS_PUBLISHER_ID`           | Publisher ID from the developer dashboard **Account** page |
+| Variable | `CWS_EXTENSION_ID`           | The extension ID                                           |
 
-   - Go to the [Google Cloud Console](https://console.cloud.google.com).
-   - Create a project or select an existing one, and enable the **Chrome Web Store API**.
-   - Set up an **External** OAuth consent screen and add your developer email to the **Test users** list.
-   - Go to **Credentials > Create Credentials > OAuth client ID** and select **Web application**.
-   - Add `https://developers.google.com/oauthplayground` to the **Authorized redirect URIs**.
-   - Save your generated **Client ID** and **Client Secret**.
+GitHub authentication uses the built-in `GITHUB_TOKEN`, so no personal access token is required. The workflow grants it `contents: write` to create tags and releases.
 
-2. **Generate the Refresh Token**:
-   - Visit the [OAuth 2.0 Playground](https://developers.google.com/oauthplayground).
-   - Click the **Gear icon ⚙️** (top-right corner).
-   - Check **"Use your own OAuth credentials"** and enter your **Client ID** and **Client Secret**.
-   - Under **Step 1 (Select & authorize APIs)**, paste `https://www.googleapis.com/auth/chromewebstore` in the text box and click **Authorize APIs**.
-   - Log in with your developer account and allow the requested access.
-   - Under **Step 2**, click **Exchange authorization code for tokens**.
-   - Copy the generated **Refresh token** and configure it as `GOOGLE_REFRESH_TOKEN` in GitHub Secrets.
+#### How to set up the service account
+
+1. Enable the [Chrome Web Store API](https://console.cloud.google.com/apis/library/chromewebstore.googleapis.com) in your Google Cloud project.
+2. Create a service account at [IAM & Admin > Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts). It needs no IAM roles.
+3. On the service account's **Keys** tab, choose **Add key > Create new key > JSON**.
+4. In the [developer dashboard](https://chrome.google.com/webstore/devconsole) under **Account**, add the service account's email address. Only one service account is allowed per publisher.
+5. Store the JSON key as `GOOGLE_SERVICE_ACCOUNT_KEY`, and copy the Publisher ID from the same page into `CWS_PUBLISHER_ID`.
+
+To confirm the credentials work without publishing anything:
+
+```bash
+GOOGLE_SERVICE_ACCOUNT_KEY="$(cat key.json)" \
+CWS_PUBLISHER_ID=... CWS_EXTENSION_ID=... \
+  node scripts/chrome-webstore.mjs status
+```
+
+That prints the live and in-review versions. The script accepts a pre-minted `CWS_ACCESS_TOKEN` as well, which is the hook for moving to workload identity federation and dropping the stored key entirely.
 
 ### Architecture
 

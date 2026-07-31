@@ -7,11 +7,11 @@ export default {
     '@semantic-release/commit-analyzer',
     '@semantic-release/release-notes-generator',
     [
-      'semantic-release-chrome',
+      '@semantic-release/exec',
       {
-        asset: 'butler.zip',
-        distFolder: 'dist/butler',
-        extensionId: 'haepoecmeobjjfeonmpphmpajaefcnfo',
+        prepareCmd:
+          'node scripts/chrome-webstore.mjs prepare ${nextRelease.version}',
+        publishCmd: 'node scripts/chrome-webstore.mjs publish',
       },
     ],
     [

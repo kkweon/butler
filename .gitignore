@@ -53,3 +53,5 @@ Thumbs.db
 GEMINI.md
 AGENTS.md
 
+# Build artifact produced by the release pipeline
+butler.zip
