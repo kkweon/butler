@@ -1,6 +1,18 @@
 // Karma configuration file, see link for more information
 // https://karma-runner.github.io/1.0/config/configuration-file.html
-process.env.CHROME_BIN = require('puppeteer').executablePath()
+// Puppeteer 25 made executablePath() async, and this file is CommonJS so it
+// cannot await at module scope. computeExecutablePath() is the synchronous
+// equivalent and takes the same build id puppeteer itself resolves.
+const { PUPPETEER_REVISIONS } = require('puppeteer')
+const { computeExecutablePath } = require('@puppeteer/browsers')
+
+process.env.CHROME_BIN = computeExecutablePath({
+  browser: 'chrome',
+  buildId: PUPPETEER_REVISIONS.chrome,
+  cacheDir:
+    process.env.PUPPETEER_CACHE_DIR ||
+    require('path').join(require('os').homedir(), '.cache', 'puppeteer'),
+})
 
 module.exports = function (config) {
   config.set({
