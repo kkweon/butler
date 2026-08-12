@@ -1,5 +1,5 @@
 import { Component } from '@angular/core'
-import { CommonModule } from '@angular/common'
+
 import { AppComponent as PopupComponent } from './app.component'
 
 @Component({
@@ -10,7 +10,7 @@ import { AppComponent as PopupComponent } from './app.component'
     </div>
   `,
   standalone: true,
-  imports: [CommonModule, PopupComponent],
+  imports: [PopupComponent],
 })
 export class ContainerComponent {
   constructor() {}

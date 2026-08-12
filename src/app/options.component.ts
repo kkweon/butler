@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core'
-import { CommonModule } from '@angular/common'
+
 import {
   MatSlideToggleChange,
   MatSlideToggleModule,
@@ -29,12 +29,7 @@ function getYYYYMMDD(unixEpoch: number | Date): string {
   templateUrl: './options.component.html',
   styleUrls: ['./options.component.scss'],
   standalone: true,
-  imports: [
-    CommonModule,
-    MatSlideToggleModule,
-    MatFormFieldModule,
-    MatInputModule,
-  ],
+  imports: [MatSlideToggleModule, MatFormFieldModule, MatInputModule],
 })
 export class OptionsComponent implements OnInit {
   includesBookmarks: boolean

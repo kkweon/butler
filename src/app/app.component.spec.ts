@@ -155,6 +155,10 @@ describe('AppComponent', () => {
       // We need to ensure `latestResults` has a known state for these tests.
       // Set searchInput to a value that would typically produce results.
       component.searchInput.setValue('test')
+      // Setting the control directly does not mark the view dirty the way a
+      // real keystroke does, so Angular 21 skips the refresh but still runs
+      // its checkNoChanges pass and reports the stale binding as NG0100.
+      fixture.changeDetectorRef.markForCheck()
 
       fixture.detectChanges()
       await fixture.whenStable()

@@ -19,174 +19,184 @@
     />
   </div>
 
-  <div
-    class="results-container"
-    *ngIf="searchInput.value?.length > 0"
-    role="listbox"
-    aria-label="Search results"
-  >
-    <ng-container *ngIf="allResults$ | async as results">
-      <!-- Browser Actions Group -->
-      <div
-        class="result-group"
-        *ngIf="results.actions.length > 0"
-        role="group"
-        aria-label="Actions"
-      >
-        <div class="result-group-header">
-          <mat-icon aria-hidden="true">settings</mat-icon>
-          ACTIONS ({{ results.actions.length }})
-        </div>
-        <button
-          class="result-item"
-          *ngFor="let browserAction of results.actions; let i = index"
-          [class.selected]="selectedIndex === getActionIndex(i)"
-          [id]="'action-' + i"
-          role="option"
-          [attr.aria-selected]="selectedIndex === getActionIndex(i)"
-          (click)="handleResultItemClick(browserAction, getActionIndex(i))"
-        >
-          <div class="result-icon">
-            <mat-icon aria-hidden="true">bolt</mat-icon>
+  @if (searchInput.value?.length > 0) {
+    <div class="results-container" role="listbox" aria-label="Search results">
+      @if (allResults$ | async; as results) {
+        <!-- Browser Actions Group -->
+        @if (results.actions.length > 0) {
+          <div class="result-group" role="group" aria-label="Actions">
+            <div class="result-group-header">
+              <mat-icon aria-hidden="true">settings</mat-icon>
+              ACTIONS ({{ results.actions.length }})
+            </div>
+            @for (
+              browserAction of results.actions;
+              track browserAction;
+              let i = $index
+            ) {
+              <button
+                class="result-item"
+                [class.selected]="selectedIndex === getActionIndex(i)"
+                [id]="'action-' + i"
+                role="option"
+                [attr.aria-selected]="selectedIndex === getActionIndex(i)"
+                (click)="
+                  handleResultItemClick(browserAction, getActionIndex(i))
+                "
+              >
+                <div class="result-icon">
+                  <mat-icon aria-hidden="true">bolt</mat-icon>
+                </div>
+                <div class="result-content">
+                  <div class="result-title">{{ browserAction.name }}</div>
+                </div>
+              </button>
+            }
           </div>
-          <div class="result-content">
-            <div class="result-title">{{ browserAction.name }}</div>
-          </div>
-        </button>
-      </div>
-
-      <!-- Tabs Group -->
-      <div
-        class="result-group"
-        *ngIf="results.tabs.length > 0"
-        role="group"
-        aria-label="Open tabs"
-      >
-        <div class="result-group-header">
-          <mat-icon aria-hidden="true">tab</mat-icon>
-          TABS ({{ results.tabs.length }})
-        </div>
-        <button
-          class="result-item"
-          *ngFor="let searchResult of results.tabs; let i = index"
-          [class.selected]="selectedIndex === getTabIndex(i, results)"
-          [id]="'tab-' + i"
-          role="option"
-          [attr.aria-selected]="selectedIndex === getTabIndex(i, results)"
-          (click)="handleResultItemClick(searchResult, getTabIndex(i, results))"
-        >
-          <div class="result-icon">
-            <img
-              *ngIf="searchResult.faviconUrl; else defaultTabIcon"
-              class="favicon"
-              [src]="searchResult.faviconUrl"
-              [alt]="'Favicon for ' + searchResult.name"
-            />
-            <ng-template #defaultTabIcon>
+        }
+        <!-- Tabs Group -->
+        @if (results.tabs.length > 0) {
+          <div class="result-group" role="group" aria-label="Open tabs">
+            <div class="result-group-header">
               <mat-icon aria-hidden="true">tab</mat-icon>
-            </ng-template>
+              TABS ({{ results.tabs.length }})
+            </div>
+            @for (
+              searchResult of results.tabs;
+              track searchResult;
+              let i = $index
+            ) {
+              <button
+                class="result-item"
+                [class.selected]="selectedIndex === getTabIndex(i, results)"
+                [id]="'tab-' + i"
+                role="option"
+                [attr.aria-selected]="selectedIndex === getTabIndex(i, results)"
+                (click)="
+                  handleResultItemClick(searchResult, getTabIndex(i, results))
+                "
+              >
+                <div class="result-icon">
+                  @if (searchResult.faviconUrl) {
+                    <img
+                      class="favicon"
+                      [src]="searchResult.faviconUrl"
+                      [alt]="'Favicon for ' + searchResult.name"
+                    />
+                  } @else {
+                    <mat-icon aria-hidden="true">tab</mat-icon>
+                  }
+                </div>
+                <div class="result-content">
+                  <div class="result-title">{{ searchResult.name }}</div>
+                  <div class="result-subtitle">{{ searchResult.url }}</div>
+                </div>
+              </button>
+            }
           </div>
-          <div class="result-content">
-            <div class="result-title">{{ searchResult.name }}</div>
-            <div class="result-subtitle">{{ searchResult.url }}</div>
-          </div>
-        </button>
-      </div>
-
-      <!-- Bookmarks Group -->
-      <div
-        class="result-group"
-        *ngIf="results.bookmarks.length > 0"
-        role="group"
-        aria-label="Bookmarks"
-      >
-        <div class="result-group-header">
-          <mat-icon aria-hidden="true">bookmark</mat-icon>
-          BOOKMARKS ({{ results.bookmarks.length }})
-        </div>
-        <button
-          class="result-item"
-          *ngFor="let searchResult of results.bookmarks; let i = index"
-          [class.selected]="selectedIndex === getBookmarkIndex(i, results)"
-          [id]="'bookmark-' + i"
-          role="option"
-          [attr.aria-selected]="selectedIndex === getBookmarkIndex(i, results)"
-          (click)="
-            handleResultItemClick(searchResult, getBookmarkIndex(i, results))
-          "
-        >
-          <div class="result-icon">
-            <img
-              *ngIf="searchResult.faviconUrl; else defaultBookmarkIcon"
-              class="favicon"
-              [src]="searchResult.faviconUrl"
-              [alt]="'Favicon for ' + searchResult.name"
-            />
-            <ng-template #defaultBookmarkIcon>
+        }
+        <!-- Bookmarks Group -->
+        @if (results.bookmarks.length > 0) {
+          <div class="result-group" role="group" aria-label="Bookmarks">
+            <div class="result-group-header">
               <mat-icon aria-hidden="true">bookmark</mat-icon>
-            </ng-template>
+              BOOKMARKS ({{ results.bookmarks.length }})
+            </div>
+            @for (
+              searchResult of results.bookmarks;
+              track searchResult;
+              let i = $index
+            ) {
+              <button
+                class="result-item"
+                [class.selected]="
+                  selectedIndex === getBookmarkIndex(i, results)
+                "
+                [id]="'bookmark-' + i"
+                role="option"
+                [attr.aria-selected]="
+                  selectedIndex === getBookmarkIndex(i, results)
+                "
+                (click)="
+                  handleResultItemClick(
+                    searchResult,
+                    getBookmarkIndex(i, results)
+                  )
+                "
+              >
+                <div class="result-icon">
+                  @if (searchResult.faviconUrl) {
+                    <img
+                      class="favicon"
+                      [src]="searchResult.faviconUrl"
+                      [alt]="'Favicon for ' + searchResult.name"
+                    />
+                  } @else {
+                    <mat-icon aria-hidden="true">bookmark</mat-icon>
+                  }
+                </div>
+                <div class="result-content">
+                  <div class="result-title">{{ searchResult.name }}</div>
+                  <div class="result-subtitle">{{ searchResult.url }}</div>
+                </div>
+              </button>
+            }
           </div>
-          <div class="result-content">
-            <div class="result-title">{{ searchResult.name }}</div>
-            <div class="result-subtitle">{{ searchResult.url }}</div>
+        }
+        <!-- History Group -->
+        @if (results.history.length > 0) {
+          <div class="result-group" role="group" aria-label="Browser history">
+            <div class="result-group-header">
+              <mat-icon aria-hidden="true">history</mat-icon>
+              HISTORY ({{ results.history.length }})
+            </div>
+            @for (
+              searchResult of results.history;
+              track searchResult;
+              let i = $index
+            ) {
+              <button
+                class="result-item"
+                [class.selected]="selectedIndex === getHistoryIndex(i, results)"
+                [id]="'history-' + i"
+                role="option"
+                [attr.aria-selected]="
+                  selectedIndex === getHistoryIndex(i, results)
+                "
+                (click)="
+                  handleResultItemClick(
+                    searchResult,
+                    getHistoryIndex(i, results)
+                  )
+                "
+              >
+                <div class="result-icon">
+                  <mat-icon aria-hidden="true">history</mat-icon>
+                </div>
+                <div class="result-content">
+                  <div class="result-title">{{ searchResult.name }}</div>
+                  <div class="result-subtitle">{{ searchResult.url }}</div>
+                </div>
+              </button>
+            }
           </div>
-        </button>
-      </div>
-
-      <!-- History Group -->
-      <div
-        class="result-group"
-        *ngIf="results.history.length > 0"
-        role="group"
-        aria-label="Browser history"
-      >
-        <div class="result-group-header">
-          <mat-icon aria-hidden="true">history</mat-icon>
-          HISTORY ({{ results.history.length }})
+        }
+      }
+      <!-- Loading State -->
+      @if (isSearchingHistory) {
+        <div class="loading-state" role="status" aria-live="polite">
+          <mat-icon aria-hidden="true">refresh</mat-icon>
+          Loading history...
         </div>
-        <button
-          class="result-item"
-          *ngFor="let searchResult of results.history; let i = index"
-          [class.selected]="selectedIndex === getHistoryIndex(i, results)"
-          [id]="'history-' + i"
-          role="option"
-          [attr.aria-selected]="selectedIndex === getHistoryIndex(i, results)"
-          (click)="
-            handleResultItemClick(searchResult, getHistoryIndex(i, results))
-          "
-        >
-          <div class="result-icon">
-            <mat-icon aria-hidden="true">history</mat-icon>
-          </div>
-          <div class="result-content">
-            <div class="result-title">{{ searchResult.name }}</div>
-            <div class="result-subtitle">{{ searchResult.url }}</div>
-          </div>
-        </button>
-      </div>
-    </ng-container>
-
-    <!-- Loading State -->
-    <div
-      class="loading-state"
-      *ngIf="isSearchingHistory"
-      role="status"
-      aria-live="polite"
-    >
-      <mat-icon aria-hidden="true">refresh</mat-icon>
-      Loading history...
+      }
+      <!-- Empty State -->
+      @if ((hasAnyResults$ | async) === false && !isSearchingHistory) {
+        <div class="empty-state" role="status" aria-live="polite">
+          No results found for "{{ searchInput.value }}"
+        </div>
+      }
     </div>
-
-    <!-- Empty State -->
-    <div
-      class="empty-state"
-      *ngIf="(hasAnyResults$ | async) === false && !isSearchingHistory"
-      role="status"
-      aria-live="polite"
-    >
-      No results found for "{{ searchInput.value }}"
-    </div>
-  </div>
+  }
 
   <div class="attribution">
     Icons made by
