@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core'
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core'
 
 import {
   MatSlideToggleChange,
@@ -29,6 +29,7 @@ function getYYYYMMDD(unixEpoch: number | Date): string {
   templateUrl: './options.component.html',
   styleUrls: ['./options.component.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [MatSlideToggleModule, MatFormFieldModule, MatInputModule],
 })
 export class OptionsComponent implements OnInit {

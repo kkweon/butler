@@ -4,6 +4,7 @@ import {
   ViewChild,
   HostListener,
   ElementRef,
+  ChangeDetectionStrategy,
 } from '@angular/core'
 import { CommonModule } from '@angular/common'
 import { UntypedFormControl, ReactiveFormsModule } from '@angular/forms'
@@ -34,6 +35,7 @@ import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [CommonModule, ReactiveFormsModule, MatIconModule],
 })
 export class AppComponent implements OnInit {

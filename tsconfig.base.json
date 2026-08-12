@@ -1,11 +1,14 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": "./",
+    // TypeScript 6 turns `strict` on by default. The codebase predates that
+    // and has ~28 nullability errors under it, so keep the previous behaviour
+    // explicit here rather than silently changing what type checking means.
+    // Enabling this is worth doing on its own, separate from a version bump.
+    "strict": false,
     "outDir": "./dist/out-tsc",
     "sourceMap": true,
     "declaration": false,
-    "downlevelIteration": true,
     "experimentalDecorators": true,
     "moduleResolution": "bundler",
     "importHelpers": true,

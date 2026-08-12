@@ -1,4 +1,4 @@
-import { Component } from '@angular/core'
+import { Component, ChangeDetectionStrategy } from '@angular/core'
 
 import { AppComponent as PopupComponent } from './app.component'
 
@@ -10,6 +10,7 @@ import { AppComponent as PopupComponent } from './app.component'
     </div>
   `,
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [PopupComponent],
 })
 export class ContainerComponent {
