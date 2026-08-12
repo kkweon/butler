@@ -14,6 +14,8 @@ Butler is a Chrome extension that provides a unified search interface for managi
   - Close other tabs (excluding pinned tabs)
   - Close tabs to the right
   - Open extension settings
+- **Multi-Select Aware**: Tab actions operate on every tab you selected in Chrome
+  (Ctrl/Cmd+click or Shift+click), not just the active one
 - **Configurable Options**: Customize search data sources (tabs, history, bookmarks)
 - **Fuzzy Search**: Powered by Fuse.js for intelligent matching
 - **Material Design**: Clean, responsive interface

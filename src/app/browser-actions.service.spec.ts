@@ -35,6 +35,7 @@ describe('BrowserActionsService', () => {
       'tabsQuery',
       'tabsRemove',
       'getCurrentActiveTab',
+      'getHighlightedTabs',
       'openSettings',
       'openChromeSettings',
       'openExtensions',
@@ -42,8 +43,9 @@ describe('BrowserActionsService', () => {
       'sortTabsInAllWindows',
       'copyToClipboard',
       'toggleTabPin',
-      'moveCurrentTabToFirst',
-      'moveCurrentTabToLast',
+      'setTabsPinned',
+      'moveSelectedTabsToFirst',
+      'moveSelectedTabsToLast',
     ])
 
     TestBed.configureTestingModule({
@@ -94,9 +96,9 @@ describe('BrowserActionsService', () => {
 
   describe('getBrowserActions', () => {
     it('should include pin action when active tab is available', async () => {
-      const mockTab = createMockTab({ pinned: false })
-      mockChromeService.getCurrentActiveTab.and.returnValue(
-        Promise.resolve(mockTab),
+      const mockTab = createMockTab({ pinned: false, highlighted: true })
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve([mockTab]),
       )
 
       const actions = await service.getBrowserActions()
@@ -107,9 +109,9 @@ describe('BrowserActionsService', () => {
     })
 
     it('should show unpin action when tab is pinned', async () => {
-      const mockTab = createMockTab({ pinned: true })
-      mockChromeService.getCurrentActiveTab.and.returnValue(
-        Promise.resolve(mockTab),
+      const mockTab = createMockTab({ pinned: true, highlighted: true })
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve([mockTab]),
       )
 
       const actions = await service.getBrowserActions()
@@ -117,10 +119,10 @@ describe('BrowserActionsService', () => {
       expect(actions[0].name).toBe('Unpin the current tab')
     })
 
-    it('should return only base actions when getCurrentActiveTab fails', async () => {
+    it('should return only base actions when getHighlightedTabs fails', async () => {
       spyOn(console, 'error') // Suppress console.error for this test
 
-      mockChromeService.getCurrentActiveTab.and.returnValue(
+      mockChromeService.getHighlightedTabs.and.returnValue(
         Promise.reject(new Error('Failed to get tab')),
       )
 
@@ -128,6 +130,214 @@ describe('BrowserActionsService', () => {
 
       expect(actions).toBeDefined()
       expect(actions.length).toBe(12) // Only base actions
+    })
+
+    it('should label the selection-aware actions with the selected tab count', async () => {
+      const selectedTabs = [
+        createMockTab({ id: 1, index: 0, highlighted: true, active: true }),
+        createMockTab({ id: 2, index: 1, highlighted: true }),
+        createMockTab({ id: 3, index: 2, highlighted: true }),
+      ]
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve(selectedTabs),
+      )
+
+      const actions = await service.getBrowserActions()
+
+      expect(actions.map((action) => action.name)).toEqual([
+        'Pin 3 tabs',
+        'Close other tabs',
+        'Close tabs to the right',
+        'Close tabs to the left',
+        'Open settings',
+        'Open Chrome settings',
+        'Open Chrome extensions',
+        'Open Chrome keyboard shortcuts',
+        'Sort tabs by domain',
+        'Copy 3 URLs',
+        'Close duplicate tabs',
+        'Move 3 tabs to first',
+        'Move 3 tabs to last',
+      ])
+    })
+
+    it('should unpin the whole selection only when every selected tab is pinned', async () => {
+      const selectedTabs = [
+        createMockTab({ id: 1, pinned: true, highlighted: true }),
+        createMockTab({ id: 2, pinned: true, highlighted: true }),
+      ]
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve(selectedTabs),
+      )
+      mockChromeService.setTabsPinned.and.returnValue(Promise.resolve())
+
+      const actions = await service.getBrowserActions()
+
+      expect(actions[0].name).toBe('Unpin 2 tabs')
+
+      await actions[0].action()
+
+      expect(mockChromeService.setTabsPinned).toHaveBeenCalledWith(
+        [1, 2],
+        false,
+      )
+    })
+
+    it('should pin the whole selection when only some selected tabs are pinned', async () => {
+      const selectedTabs = [
+        createMockTab({ id: 1, pinned: true, highlighted: true }),
+        createMockTab({ id: 2, pinned: false, highlighted: true }),
+      ]
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve(selectedTabs),
+      )
+      mockChromeService.setTabsPinned.and.returnValue(Promise.resolve())
+
+      const actions = await service.getBrowserActions()
+
+      expect(actions[0].name).toBe('Pin 2 tabs')
+
+      await actions[0].action()
+
+      expect(mockChromeService.setTabsPinned).toHaveBeenCalledWith([1, 2], true)
+    })
+  })
+
+  describe('Close other tabs action', () => {
+    let closeOtherTabsAction: () => Promise<void>
+
+    beforeEach(() => {
+      closeOtherTabsAction = service
+        .getBaseBrowserActions()
+        .find((a) => a.name === 'Close other tabs')!.action
+      mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
+    })
+
+    it('should keep every multi-selected tab', async () => {
+      const allTabs = [
+        createMockTab({ id: 1, index: 0 }),
+        createMockTab({ id: 2, index: 1, highlighted: true, active: true }),
+        createMockTab({ id: 3, index: 2, highlighted: true }),
+        createMockTab({ id: 4, index: 3 }),
+      ]
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve([allTabs[1], allTabs[2]]),
+      )
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(allTabs))
+
+      await closeOtherTabsAction()
+
+      expect(mockChromeService.tabsRemove).toHaveBeenCalledWith([1, 4])
+    })
+
+    it('should keep only the active tab when nothing else is selected', async () => {
+      const allTabs = [
+        createMockTab({ id: 1, index: 0 }),
+        createMockTab({ id: 2, index: 1, highlighted: true, active: true }),
+      ]
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve([allTabs[1]]),
+      )
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(allTabs))
+
+      await closeOtherTabsAction()
+
+      expect(mockChromeService.tabsRemove).toHaveBeenCalledWith([1])
+    })
+
+    it('should not call tabsRemove when there is nothing else to close', async () => {
+      const allTabs = [
+        createMockTab({ id: 1, index: 0, highlighted: true, active: true }),
+      ]
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve(allTabs),
+      )
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(allTabs))
+
+      await closeOtherTabsAction()
+
+      expect(mockChromeService.tabsRemove).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Close tabs to the right/left actions', () => {
+    const allTabs = [
+      createMockTab({ id: 1, index: 0 }),
+      createMockTab({ id: 2, index: 1, highlighted: true, active: true }),
+      createMockTab({ id: 3, index: 2, highlighted: true }),
+      createMockTab({ id: 4, index: 3 }),
+    ]
+
+    function actionNamed(name: string): () => Promise<void> {
+      return service.getBaseBrowserActions().find((a) => a.name === name)!
+        .action
+    }
+
+    beforeEach(() => {
+      mockChromeService.tabsRemove.and.returnValue(Promise.resolve())
+      mockChromeService.tabsQuery.and.returnValue(Promise.resolve(allTabs))
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve([allTabs[1], allTabs[2]]),
+      )
+    })
+
+    it('should close tabs right of the last selected tab', async () => {
+      await actionNamed('Close tabs to the right')()
+
+      expect(mockChromeService.tabsRemove).toHaveBeenCalledWith([4])
+    })
+
+    it('should close tabs left of the first selected tab', async () => {
+      await actionNamed('Close tabs to the left')()
+
+      expect(mockChromeService.tabsRemove).toHaveBeenCalledWith([1])
+    })
+
+    it('should do nothing when there is no tab beyond the selection', async () => {
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve([allTabs[0], allTabs[3]]),
+      )
+
+      await actionNamed('Close tabs to the right')()
+      await actionNamed('Close tabs to the left')()
+
+      expect(mockChromeService.tabsRemove).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Copy URL action', () => {
+    it('should copy every selected URL on its own line', async () => {
+      const selectedTabs = [
+        createMockTab({ id: 1, url: 'https://example.com/a' }),
+        createMockTab({ id: 2, url: 'https://example.com/b' }),
+      ]
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve(selectedTabs),
+      )
+      mockChromeService.copyToClipboard.and.returnValue(Promise.resolve())
+
+      const action = service
+        .getBaseBrowserActions(2)
+        .find((a) => a.name === 'Copy 2 URLs')!.action
+      await action()
+
+      expect(mockChromeService.copyToClipboard).toHaveBeenCalledWith(
+        'https://example.com/a\nhttps://example.com/b',
+      )
+    })
+
+    it('should skip tabs without a URL', async () => {
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve([createMockTab({ id: 1, url: undefined })]),
+      )
+      mockChromeService.copyToClipboard.and.returnValue(Promise.resolve())
+
+      const action = service
+        .getBaseBrowserActions()
+        .find((a) => a.name === 'Copy URL')!.action
+      await action()
+
+      expect(mockChromeService.copyToClipboard).not.toHaveBeenCalled()
     })
   })
 
@@ -278,7 +488,7 @@ describe('BrowserActionsService', () => {
   })
 
   describe('Move current tab to first action', () => {
-    it('should call moveCurrentTabToFirst on ChromeService', async () => {
+    it('should call moveSelectedTabsToFirst on ChromeService', async () => {
       const baseActions = service.getBaseBrowserActions()
       const moveToFirstAction = baseActions.find(
         (action) => action.name === 'Move current tab to first',
@@ -286,16 +496,18 @@ describe('BrowserActionsService', () => {
 
       expect(moveToFirstAction).toBeDefined()
 
-      mockChromeService.moveCurrentTabToFirst.and.returnValue(Promise.resolve())
+      mockChromeService.moveSelectedTabsToFirst.and.returnValue(
+        Promise.resolve(),
+      )
 
       await moveToFirstAction!.action()
 
-      expect(mockChromeService.moveCurrentTabToFirst).toHaveBeenCalled()
+      expect(mockChromeService.moveSelectedTabsToFirst).toHaveBeenCalled()
     })
   })
 
   describe('Move current tab to last action', () => {
-    it('should call moveCurrentTabToLast on ChromeService', async () => {
+    it('should call moveSelectedTabsToLast on ChromeService', async () => {
       const baseActions = service.getBaseBrowserActions()
       const moveToLastAction = baseActions.find(
         (action) => action.name === 'Move current tab to last',
@@ -303,11 +515,13 @@ describe('BrowserActionsService', () => {
 
       expect(moveToLastAction).toBeDefined()
 
-      mockChromeService.moveCurrentTabToLast.and.returnValue(Promise.resolve())
+      mockChromeService.moveSelectedTabsToLast.and.returnValue(
+        Promise.resolve(),
+      )
 
       await moveToLastAction!.action()
 
-      expect(mockChromeService.moveCurrentTabToLast).toHaveBeenCalled()
+      expect(mockChromeService.moveSelectedTabsToLast).toHaveBeenCalled()
     })
   })
 })

@@ -59,23 +59,58 @@ describe('ChromeService', () => {
     })
 
     describe('tabsMove', () => {
-      it('should resolve with moved tab from chrome.tabs.move', async () => {
-        const mockTab = { id: 1, index: 2 }
+      it('should resolve with moved tabs from chrome.tabs.move', async () => {
+        const mockTabs = [{ id: 1, index: 2 }]
         const moveProperties = { index: 0 }
         mockChrome.tabs.move.and.callFake(
-          (tabId: any, props: any, callback: any) => {
-            callback(mockTab)
+          (tabIds: any, props: any, callback: any) => {
+            callback(mockTabs)
           },
         )
 
-        const result = await service.tabsMove(1, moveProperties)
+        const result = await service.tabsMove([1], moveProperties)
 
         expect(mockChrome.tabs.move).toHaveBeenCalledWith(
-          1,
+          [1],
           moveProperties,
           jasmine.any(Function),
         )
-        expect(result).toEqual(mockTab as any)
+        expect(result).toEqual(mockTabs as any)
+      })
+    })
+
+    describe('getHighlightedTabs', () => {
+      it('should resolve with every multi-selected tab', async () => {
+        const mockTabs = [
+          { id: 1, index: 0, highlighted: true, active: true },
+          { id: 2, index: 1, highlighted: true, active: false },
+        ]
+        mockChrome.tabs.query = jasmine
+          .createSpy('query')
+          .and.callFake((queryInfo: any, callback: any) => {
+            callback(mockTabs)
+          })
+
+        const result = await service.getHighlightedTabs()
+
+        expect(mockChrome.tabs.query).toHaveBeenCalledWith(
+          { highlighted: true, currentWindow: true },
+          jasmine.any(Function),
+        )
+        expect(result).toEqual(mockTabs as any)
+      })
+
+      it('should fall back to the active tab when nothing is highlighted', async () => {
+        const activeTab = { id: 9, index: 0, active: true }
+        mockChrome.tabs.query = jasmine
+          .createSpy('query')
+          .and.callFake((queryInfo: any, callback: any) => {
+            callback(queryInfo.highlighted ? [] : [activeTab])
+          })
+
+        const result = await service.getHighlightedTabs()
+
+        expect(result).toEqual([activeTab] as any)
       })
     })
 
@@ -229,11 +264,11 @@ describe('ChromeService', () => {
       })
     })
 
-    describe('moveCurrentTabToFirst', () => {
+    describe('moveSelectedTabsToFirst', () => {
       beforeEach(() => {
         mockChrome.tabs.query = jasmine.createSpy('query')
         mockChrome.tabs.move = jasmine.createSpy('move')
-        spyOn(service, 'getCurrentActiveTab')
+        spyOn(service, 'getHighlightedTabs')
         spyOn(service, 'tabsQuery')
         spyOn(service, 'tabsMove').and.returnValue(Promise.resolve({} as any))
       })
@@ -247,16 +282,16 @@ describe('ChromeService', () => {
           { id: 4, index: 3, pinned: false }, // active tab
         ]
 
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
         ;(service.tabsQuery as jasmine.Spy).and.returnValue(
           Promise.resolve(allTabs),
         )
 
-        await service.moveCurrentTabToFirst()
+        await service.moveSelectedTabsToFirst()
 
-        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // First unpinned position
+        expect(service.tabsMove).toHaveBeenCalledWith([4], { index: 2 }) // First unpinned position
       })
 
       it('should move pinned active tab to first position among pinned tabs', async () => {
@@ -268,16 +303,69 @@ describe('ChromeService', () => {
           { id: 4, index: 3, pinned: false },
         ]
 
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
         ;(service.tabsQuery as jasmine.Spy).and.returnValue(
           Promise.resolve(allTabs),
         )
 
-        await service.moveCurrentTabToFirst()
+        await service.moveSelectedTabsToFirst()
 
-        expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 0 }) // First pinned position
+        expect(service.tabsMove).toHaveBeenCalledWith([2], { index: 0 }) // First pinned position
+      })
+
+      it('should move every multi-selected tab as one block', async () => {
+        const selectedTabs = [
+          { id: 4, index: 3, pinned: false, windowId: 1 },
+          { id: 5, index: 4, pinned: false, windowId: 1 },
+        ]
+        const allTabs = [
+          { id: 1, index: 0, pinned: true },
+          { id: 2, index: 1, pinned: true },
+          { id: 3, index: 2, pinned: false },
+          { id: 4, index: 3, pinned: false }, // selected
+          { id: 5, index: 4, pinned: false }, // selected
+        ]
+
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve(selectedTabs),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveSelectedTabsToFirst()
+
+        // Both selected tabs land right after the pinned block, in order
+        expect(service.tabsMove).toHaveBeenCalledWith([4, 5], { index: 2 })
+        expect(service.tabsMove).toHaveBeenCalledTimes(1)
+      })
+
+      it('should move pinned and unpinned selected tabs into their own regions', async () => {
+        const selectedTabs = [
+          { id: 2, index: 1, pinned: true, windowId: 1 },
+          { id: 3, index: 2, pinned: false, windowId: 1 },
+        ]
+        const allTabs = [
+          { id: 1, index: 0, pinned: true },
+          { id: 2, index: 1, pinned: true }, // selected
+          { id: 3, index: 2, pinned: false }, // selected, already first unpinned
+          { id: 4, index: 3, pinned: false },
+        ]
+
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve(selectedTabs),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveSelectedTabsToFirst()
+
+        expect(service.tabsMove).toHaveBeenCalledWith([2], { index: 0 })
+        // The unpinned selection is already at the first unpinned position
+        expect(service.tabsMove).toHaveBeenCalledTimes(1)
       })
 
       it('should not move tab if already at first position', async () => {
@@ -288,14 +376,14 @@ describe('ChromeService', () => {
           { id: 3, index: 2, pinned: false },
         ]
 
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
         ;(service.tabsQuery as jasmine.Spy).and.returnValue(
           Promise.resolve(allTabs),
         )
 
-        await service.moveCurrentTabToFirst()
+        await service.moveSelectedTabsToFirst()
 
         expect(service.tabsMove).not.toHaveBeenCalled()
       })
@@ -309,49 +397,49 @@ describe('ChromeService', () => {
           { id: 4, index: 3, pinned: false },
         ]
 
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
         ;(service.tabsQuery as jasmine.Spy).and.returnValue(
           Promise.resolve(allTabs),
         )
 
-        await service.moveCurrentTabToFirst()
+        await service.moveSelectedTabsToFirst()
 
         expect(service.tabsMove).not.toHaveBeenCalled()
       })
 
       it('should throw error when no active tab found', async () => {
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(null),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([]),
         )
 
         spyOn(console, 'error') // Suppress console error output
 
-        await expectAsync(service.moveCurrentTabToFirst()).toBeRejectedWith(
+        await expectAsync(service.moveSelectedTabsToFirst()).toBeRejectedWith(
           new Error('No active tab found'),
         )
       })
 
       it('should throw error when active tab has no ID', async () => {
         const activeTab = { index: 0, pinned: true, windowId: 1 } // no id
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
 
         spyOn(console, 'error') // Suppress console error output
 
-        await expectAsync(service.moveCurrentTabToFirst()).toBeRejectedWith(
+        await expectAsync(service.moveSelectedTabsToFirst()).toBeRejectedWith(
           new Error('No active tab found'),
         )
       })
     })
 
-    describe('moveCurrentTabToLast', () => {
+    describe('moveSelectedTabsToLast', () => {
       beforeEach(() => {
         mockChrome.tabs.query = jasmine.createSpy('query')
         mockChrome.tabs.move = jasmine.createSpy('move')
-        spyOn(service, 'getCurrentActiveTab')
+        spyOn(service, 'getHighlightedTabs')
         spyOn(service, 'tabsQuery')
         spyOn(service, 'tabsMove').and.returnValue(Promise.resolve({} as any))
       })
@@ -365,16 +453,16 @@ describe('ChromeService', () => {
           { id: 4, index: 3, pinned: false },
         ]
 
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
         ;(service.tabsQuery as jasmine.Spy).and.returnValue(
           Promise.resolve(allTabs),
         )
 
-        await service.moveCurrentTabToLast()
+        await service.moveSelectedTabsToLast()
 
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 3 }) // Last position overall
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 3 }) // Last position overall
       })
 
       it('should move pinned active tab to last position among pinned tabs', async () => {
@@ -386,16 +474,43 @@ describe('ChromeService', () => {
           { id: 4, index: 3, pinned: false },
         ]
 
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
         ;(service.tabsQuery as jasmine.Spy).and.returnValue(
           Promise.resolve(allTabs),
         )
 
-        await service.moveCurrentTabToLast()
+        await service.moveSelectedTabsToLast()
 
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 1 }) // Last pinned position
+        expect(service.tabsMove).toHaveBeenCalledWith([1], { index: 1 }) // Last pinned position
+      })
+
+      it('should move every multi-selected tab as one block', async () => {
+        const selectedTabs = [
+          { id: 3, index: 2, pinned: false, windowId: 1 },
+          { id: 4, index: 3, pinned: false, windowId: 1 },
+        ]
+        const allTabs = [
+          { id: 1, index: 0, pinned: true },
+          { id: 2, index: 1, pinned: true },
+          { id: 3, index: 2, pinned: false }, // selected
+          { id: 4, index: 3, pinned: false }, // selected
+          { id: 5, index: 4, pinned: false },
+        ]
+
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve(selectedTabs),
+        )
+        ;(service.tabsQuery as jasmine.Spy).and.returnValue(
+          Promise.resolve(allTabs),
+        )
+
+        await service.moveSelectedTabsToLast()
+
+        // Both selected tabs land at the end of the window, in order
+        expect(service.tabsMove).toHaveBeenCalledWith([3, 4], { index: 3 })
+        expect(service.tabsMove).toHaveBeenCalledTimes(1)
       })
 
       it('should not move tab if already at last position', async () => {
@@ -407,14 +522,14 @@ describe('ChromeService', () => {
           { id: 4, index: 3, pinned: false }, // active tab already at last
         ]
 
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
         ;(service.tabsQuery as jasmine.Spy).and.returnValue(
           Promise.resolve(allTabs),
         )
 
-        await service.moveCurrentTabToLast()
+        await service.moveSelectedTabsToLast()
 
         expect(service.tabsMove).not.toHaveBeenCalled()
       })
@@ -427,26 +542,26 @@ describe('ChromeService', () => {
           { id: 3, index: 2, pinned: false },
         ]
 
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(activeTab),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([activeTab]),
         )
         ;(service.tabsQuery as jasmine.Spy).and.returnValue(
           Promise.resolve(allTabs),
         )
 
-        await service.moveCurrentTabToLast()
+        await service.moveSelectedTabsToLast()
 
         expect(service.tabsMove).not.toHaveBeenCalled() // Already at last pinned position
       })
 
       it('should throw error when no active tab found', async () => {
-        ;(service.getCurrentActiveTab as jasmine.Spy).and.returnValue(
-          Promise.resolve(null),
+        ;(service.getHighlightedTabs as jasmine.Spy).and.returnValue(
+          Promise.resolve([]),
         )
 
         spyOn(console, 'error') // Suppress console error output
 
-        await expectAsync(service.moveCurrentTabToLast()).toBeRejectedWith(
+        await expectAsync(service.moveSelectedTabsToLast()).toBeRejectedWith(
           new Error('No active tab found'),
         )
       })
@@ -509,9 +624,9 @@ describe('ChromeService', () => {
 
         await service.sortTabsInAllWindows()
 
-        expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 0 }) // a.com to position 0
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 1 }) // m.com to position 1
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 2 }) // z.com to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith([2], { index: 0 }) // a.com to position 0
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 1 }) // m.com to position 1
+        expect(service.tabsMove).toHaveBeenCalledWith([1], { index: 2 }) // z.com to position 2
       })
 
       it('should group same domain tabs together and sort by full URL within domain', async () => {
@@ -534,11 +649,11 @@ describe('ChromeService', () => {
         await service.sortTabsInAllWindows()
 
         // another.com should come first (alphabetically)
-        expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 0 }) // another.com/page to position 0
+        expect(service.tabsMove).toHaveBeenCalledWith([2], { index: 0 }) // another.com/page to position 0
         // example.com tabs should be grouped together and sorted by full URL
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 1 }) // example.com/a to position 1
-        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // example.com/m to position 2
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 3 }) // example.com/z to position 3
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 1 }) // example.com/a to position 1
+        expect(service.tabsMove).toHaveBeenCalledWith([4], { index: 2 }) // example.com/m to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith([1], { index: 3 }) // example.com/z to position 3
       })
 
       it('should handle subdomains correctly by grouping them with main domain', async () => {
@@ -561,10 +676,10 @@ describe('ChromeService', () => {
         await service.sortTabsInAllWindows()
 
         // All example.com subdomains should be grouped together and sorted by full URL, then other.com
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 0 }) // a.example.com to position 0
-        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 1 }) // www.example.com to position 1
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 2 }) // z.example.com to position 2
-        expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 3 }) // other.com to position 3
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 0 }) // a.example.com to position 0
+        expect(service.tabsMove).toHaveBeenCalledWith([4], { index: 1 }) // www.example.com to position 1
+        expect(service.tabsMove).toHaveBeenCalledWith([1], { index: 2 }) // z.example.com to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith([2], { index: 3 }) // other.com to position 3
       })
 
       it('should handle different protocols (http vs https) correctly', async () => {
@@ -586,10 +701,10 @@ describe('ChromeService', () => {
         await service.sortTabsInAllWindows()
 
         // Should group by domain regardless of protocol
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 0 }) // another.com to position 0
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 0 }) // another.com to position 0
         // example.com tabs should be grouped and sorted by full URL
         // http://example.com/page2 is already at index 1 so no move call for it
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 2 }) // https://example.com/page1 to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith([1], { index: 2 }) // https://example.com/page1 to position 2
         // Verify only 2 move calls were made (not 3)
         expect(service.tabsMove).toHaveBeenCalledTimes(2)
       })
@@ -613,9 +728,9 @@ describe('ChromeService', () => {
         await service.sortTabsInAllWindows()
 
         // Valid domains should be sorted first, malformed URLs should use lexical sorting
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 0 }) // another.com to position 0
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 0 }) // another.com to position 0
         // not-a-valid-url (id:2) is already at index 1, so no move needed
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 2 }) // valid.com to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith([1], { index: 2 }) // valid.com to position 2
       })
 
       it('should keep pinned tabs before unpinned tabs', async () => {
@@ -639,12 +754,12 @@ describe('ChromeService', () => {
 
         // With default sortPinnedTabs: false, pinned tabs should maintain their order
         // Only unpinned tabs should be sorted: b.com, m.com
-        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // b.com unpinned to position 2
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 3 }) // m.com unpinned to position 3
+        expect(service.tabsMove).toHaveBeenCalledWith([4], { index: 2 }) // b.com unpinned to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 3 }) // m.com unpinned to position 3
 
         // Pinned tabs should not be moved (they already maintain their relative order)
-        expect(service.tabsMove).not.toHaveBeenCalledWith(2, { index: 0 })
-        expect(service.tabsMove).not.toHaveBeenCalledWith(1, { index: 1 })
+        expect(service.tabsMove).not.toHaveBeenCalledWith([2], { index: 0 })
+        expect(service.tabsMove).not.toHaveBeenCalledWith([1], { index: 1 })
       })
 
       it('should sort pinned tabs when sortPinnedTabs option is enabled', async () => {
@@ -678,11 +793,11 @@ describe('ChromeService', () => {
         await service.sortTabsInAllWindows()
 
         // With sortPinnedTabs: true, pinned tabs should be sorted among themselves: a.com, z.com
-        expect(service.tabsMove).toHaveBeenCalledWith(2, { index: 0 }) // a.com pinned to position 0
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 1 }) // z.com pinned to position 1
+        expect(service.tabsMove).toHaveBeenCalledWith([2], { index: 0 }) // a.com pinned to position 0
+        expect(service.tabsMove).toHaveBeenCalledWith([1], { index: 1 }) // z.com pinned to position 1
         // Unpinned tabs should be sorted after pinned: b.com, m.com
-        expect(service.tabsMove).toHaveBeenCalledWith(4, { index: 2 }) // b.com unpinned to position 2
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 3 }) // m.com unpinned to position 3
+        expect(service.tabsMove).toHaveBeenCalledWith([4], { index: 2 }) // b.com unpinned to position 2
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 3 }) // m.com unpinned to position 3
       })
 
       it('should handle tabs with no URL by placing them at end', async () => {
@@ -703,8 +818,8 @@ describe('ChromeService', () => {
 
         await service.sortTabsInAllWindows()
 
-        expect(service.tabsMove).toHaveBeenCalledWith(3, { index: 0 }) // a.com to position 0
-        expect(service.tabsMove).toHaveBeenCalledWith(1, { index: 1 }) // b.com to position 1
+        expect(service.tabsMove).toHaveBeenCalledWith([3], { index: 0 }) // a.com to position 0
+        expect(service.tabsMove).toHaveBeenCalledWith([1], { index: 1 }) // b.com to position 1
         // Tab with no URL (id: 2) should remain at end (position 2)
       })
 

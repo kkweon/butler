@@ -85,6 +85,27 @@ export class ChromeService {
     })
   }
 
+  /**
+   * Gets the tabs the user has multi-selected in the current window.
+   *
+   * Chrome keeps the active tab highlighted at all times, so without an
+   * explicit multi-selection this resolves to just the active tab, and every
+   * caller degrades to single tab behaviour. The fallback only covers the case
+   * where the query comes back empty.
+   */
+  async getHighlightedTabs(): Promise<chrome.tabs.Tab[]> {
+    const tabs = await this.tabsQuery({
+      highlighted: true,
+      currentWindow: true,
+    })
+    if (0 < tabs.length) {
+      return tabs
+    }
+
+    const activeTab = await this.getCurrentActiveTab()
+    return activeTab ? [activeTab] : []
+  }
+
   async tabsRemove(tabIds: number[]): Promise<void> {
     return new Promise((resolve) => {
       chrome.tabs.remove(tabIds, () => resolve())
@@ -125,6 +146,16 @@ export class ChromeService {
     return this.tabsUpdate(tabId, { pinned })
   }
 
+  /**
+   * Pins or unpins several tabs at once. Pinning reorders tabs, so this runs
+   * sequentially to keep the tabs in their original relative order.
+   */
+  async setTabsPinned(tabIds: number[], pinned: boolean): Promise<void> {
+    for (const tabId of tabIds) {
+      await this.toggleTabPin(tabId, pinned)
+    }
+  }
+
   async copyToClipboard(text: string): Promise<void> {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -155,12 +186,16 @@ export class ChromeService {
     })
   }
 
+  /**
+   * Moves the given tabs to consecutive positions starting at
+   * `moveProperties.index`, keeping their relative order.
+   */
   tabsMove(
-    tabId: number,
+    tabIds: number[],
     moveProperties: chrome.tabs.MoveProperties,
-  ): Promise<chrome.tabs.Tab> {
+  ): Promise<chrome.tabs.Tab[]> {
     return new Promise((resolve) => {
-      chrome.tabs.move(tabId, moveProperties, (tab) => resolve(tab))
+      chrome.tabs.move(tabIds, moveProperties, (tabs) => resolve(tabs))
     })
   }
 
@@ -187,64 +222,102 @@ export class ChromeService {
     }
   }
 
-  async moveCurrentTabToFirst(): Promise<void> {
+  /**
+   * Gets the multi-selected tabs that can actually be moved, i.e. the ones
+   * Chrome reported with an id and a window.
+   */
+  private async getMovableSelectedTabs(): Promise<chrome.tabs.Tab[]> {
+    const selectedTabs = await this.getHighlightedTabs()
+    const movableTabs = selectedTabs.filter(
+      (tab) => tab && tab.id && tab.windowId !== undefined,
+    )
+
+    if (movableTabs.length === 0) {
+      throw new Error('No active tab found')
+    }
+
+    return movableTabs
+  }
+
+  /**
+   * Moves `tabsToMove` to consecutive positions starting at `startIndex`,
+   * preserving their relative order. Does nothing if they already sit there.
+   */
+  private async moveTabsTo(
+    tabsToMove: chrome.tabs.Tab[],
+    startIndex: number,
+  ): Promise<void> {
+    if (tabsToMove.length === 0) {
+      return
+    }
+
+    const orderedTabs = [...tabsToMove].sort((a, b) => a.index - b.index)
+    const isAlreadyInPlace = orderedTabs.every(
+      (tab, offset) => tab.index === startIndex + offset,
+    )
+    if (isAlreadyInPlace) {
+      return
+    }
+
+    await this.tabsMove(
+      orderedTabs.map((tab) => tab.id),
+      { index: startIndex },
+    )
+  }
+
+  /**
+   * Moves the multi-selected tabs to the front of their own region: selected
+   * pinned tabs go to the front of the pinned block, selected unpinned tabs go
+   * right after it.
+   */
+  async moveSelectedTabsToFirst(): Promise<void> {
     try {
-      const activeTab = await this.getCurrentActiveTab()
-      if (!activeTab || !activeTab.id || activeTab.windowId === undefined) {
-        throw new Error('No active tab found')
-      }
+      const selectedTabs = await this.getMovableSelectedTabs()
+      const tabs = await this.tabsQuery({ windowId: selectedTabs[0].windowId })
+      const pinnedTabsCount = tabs.filter((tab) => tab.pinned).length
 
-      const tabs = await this.tabsQuery({ windowId: activeTab.windowId })
-      const pinnedTabs = tabs.filter((tab) => tab.pinned)
-      const unpinnedTabs = tabs.filter((tab) => !tab.pinned)
-
-      let targetIndex: number
-
-      if (activeTab.pinned) {
-        // Move to first position among pinned tabs
-        targetIndex = 0
-      } else {
-        // Move to first position among unpinned tabs (after all pinned tabs)
-        targetIndex = pinnedTabs.length
-      }
-
-      // Only move if the tab is not already at the target position
-      if (activeTab.index !== targetIndex) {
-        await this.tabsMove(activeTab.id, { index: targetIndex })
-      }
+      // Move to first position among pinned tabs
+      await this.moveTabsTo(
+        selectedTabs.filter((tab) => tab.pinned),
+        0,
+      )
+      // Move to first position among unpinned tabs (after all pinned tabs)
+      await this.moveTabsTo(
+        selectedTabs.filter((tab) => !tab.pinned),
+        pinnedTabsCount,
+      )
     } catch (error) {
-      console.error('Failed to move current tab to first position:', error)
+      console.error('Failed to move selected tabs to first position:', error)
       throw error
     }
   }
 
-  async moveCurrentTabToLast(): Promise<void> {
+  /**
+   * Moves the multi-selected tabs to the end of their own region: selected
+   * pinned tabs go to the end of the pinned block, selected unpinned tabs go to
+   * the end of the window.
+   */
+  async moveSelectedTabsToLast(): Promise<void> {
     try {
-      const activeTab = await this.getCurrentActiveTab()
-      if (!activeTab || !activeTab.id || activeTab.windowId === undefined) {
-        throw new Error('No active tab found')
-      }
+      const selectedTabs = await this.getMovableSelectedTabs()
+      const tabs = await this.tabsQuery({ windowId: selectedTabs[0].windowId })
+      const pinnedTabsCount = tabs.filter((tab) => tab.pinned).length
 
-      const tabs = await this.tabsQuery({ windowId: activeTab.windowId })
-      const pinnedTabs = tabs.filter((tab) => tab.pinned)
-      const unpinnedTabs = tabs.filter((tab) => !tab.pinned)
+      const selectedPinnedTabs = selectedTabs.filter((tab) => tab.pinned)
+      const selectedUnpinnedTabs = selectedTabs.filter((tab) => !tab.pinned)
 
-      let targetIndex: number
-
-      if (activeTab.pinned) {
-        // Move to last position among pinned tabs
-        targetIndex = pinnedTabs.length - 1
-      } else {
-        // Move to last position among all tabs
-        targetIndex = tabs.length - 1
-      }
-
-      // Only move if the tab is not already at the target position
-      if (activeTab.index !== targetIndex) {
-        await this.tabsMove(activeTab.id, { index: targetIndex })
-      }
+      // Move to last position among pinned tabs
+      await this.moveTabsTo(
+        selectedPinnedTabs,
+        pinnedTabsCount - selectedPinnedTabs.length,
+      )
+      // Move to last position among all tabs
+      await this.moveTabsTo(
+        selectedUnpinnedTabs,
+        tabs.length - selectedUnpinnedTabs.length,
+      )
     } catch (error) {
-      console.error('Failed to move current tab to last position:', error)
+      console.error('Failed to move selected tabs to last position:', error)
       throw error
     }
   }
@@ -298,7 +371,7 @@ export class ChromeService {
           for (let i = 0; i < sortedTabs.length; i++) {
             if (sortedTabs[i].index !== i) {
               try {
-                await this.tabsMove(sortedTabs[i].id, { index: i })
+                await this.tabsMove([sortedTabs[i].id], { index: i })
               } catch (error) {
                 // Skip tabs that can't be moved (e.g., if they were closed during operation)
                 console.warn('Failed to move tab:', sortedTabs[i].id, error)
