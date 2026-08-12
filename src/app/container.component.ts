@@ -1,5 +1,5 @@
-import { Component } from '@angular/core'
-import { CommonModule } from '@angular/common'
+import { Component, ChangeDetectionStrategy } from '@angular/core'
+
 import { AppComponent as PopupComponent } from './app.component'
 
 @Component({
@@ -10,7 +10,8 @@ import { AppComponent as PopupComponent } from './app.component'
     </div>
   `,
   standalone: true,
-  imports: [CommonModule, PopupComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [PopupComponent],
 })
 export class ContainerComponent {
   constructor() {}

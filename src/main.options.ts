@@ -1,4 +1,8 @@
-import { enableProdMode, importProvidersFrom } from '@angular/core'
+import {
+  enableProdMode,
+  importProvidersFrom,
+  provideZoneChangeDetection,
+} from '@angular/core'
 import { bootstrapApplication, BrowserModule } from '@angular/platform-browser'
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { MatFormFieldModule } from '@angular/material/form-field'
@@ -14,6 +18,7 @@ if (environment.production) {
 
 bootstrapApplication(OptionsComponent, {
   providers: [
+    provideZoneChangeDetection(),
     importProvidersFrom(
       BrowserModule,
       BrowserAnimationsModule,

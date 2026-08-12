@@ -1,4 +1,4 @@
-import Fuse from 'fuse.js'
+import Fuse, { type IFuseOptions } from 'fuse.js'
 
 // Common Fuse.js properties (non-generic parts)
 const COMMON_FUSE_PROPERTIES = {
@@ -17,7 +17,7 @@ export function createFuseInstance<T>(
   list: ReadonlyArray<T>,
   keys: string[],
 ): Fuse<T> {
-  const options: Fuse.IFuseOptions<T> = {
+  const options: IFuseOptions<T> = {
     ...COMMON_FUSE_PROPERTIES,
     keys,
   }

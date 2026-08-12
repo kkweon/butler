@@ -34,6 +34,8 @@ function createMockTab(
     selected: false,
     discarded: false,
     autoDiscardable: true,
+    frozen: false,
+    lastAccessed: 0,
     url: 'https://example.com/page',
     title: 'Mock Tab',
     ...overrides,
@@ -155,6 +157,10 @@ describe('AppComponent', () => {
       // We need to ensure `latestResults` has a known state for these tests.
       // Set searchInput to a value that would typically produce results.
       component.searchInput.setValue('test')
+      // Setting the control directly does not mark the view dirty the way a
+      // real keystroke does, so Angular 21 skips the refresh but still runs
+      // its checkNoChanges pass and reports the stale binding as NG0100.
+      fixture.changeDetectorRef.markForCheck()
 
       fixture.detectChanges()
       await fixture.whenStable()
@@ -346,6 +352,8 @@ describe('AppComponent', () => {
           selected: false,
           discarded: false,
           autoDiscardable: true,
+          frozen: false,
+          lastAccessed: 0,
           url: 'https://tab1.com',
           title: 'Tab 1',
         },
@@ -361,6 +369,8 @@ describe('AppComponent', () => {
           selected: false,
           discarded: false,
           autoDiscardable: true,
+          frozen: false,
+          lastAccessed: 0,
           url: 'https://active-tab.com',
           title: 'Active Tab',
         },
@@ -376,6 +386,8 @@ describe('AppComponent', () => {
           selected: false,
           discarded: false,
           autoDiscardable: true,
+          frozen: false,
+          lastAccessed: 0,
           url: 'https://tab3.com',
           title: 'Tab 3',
         },
@@ -433,6 +445,8 @@ describe('AppComponent', () => {
         selected: false,
         discarded: false,
         autoDiscardable: true,
+        frozen: false,
+        lastAccessed: 0,
         url: 'https://active-tab.com',
         title: 'Active Tab',
       }
@@ -451,6 +465,8 @@ describe('AppComponent', () => {
           selected: false,
           discarded: false,
           autoDiscardable: true,
+          frozen: false,
+          lastAccessed: 0,
           url: 'https://tab1.com',
           title: 'Tab 1',
         },
@@ -467,6 +483,8 @@ describe('AppComponent', () => {
           selected: false,
           discarded: false,
           autoDiscardable: true,
+          frozen: false,
+          lastAccessed: 0,
           url: 'https://tab3.com',
           title: 'Tab 3',
         },
@@ -482,6 +500,8 @@ describe('AppComponent', () => {
           selected: false,
           discarded: false,
           autoDiscardable: true,
+          frozen: false,
+          lastAccessed: 0,
           url: 'https://tab4.com',
           title: 'Tab 4',
         },
@@ -542,6 +562,8 @@ describe('AppComponent', () => {
         selected: false,
         discarded: false,
         autoDiscardable: true,
+        frozen: false,
+        lastAccessed: 0,
         url: 'https://example.com',
         title: 'Example',
       }
@@ -581,6 +603,8 @@ describe('AppComponent', () => {
         selected: false,
         discarded: false,
         autoDiscardable: true,
+        frozen: false,
+        lastAccessed: 0,
         url: undefined,
         title: 'Example',
       }

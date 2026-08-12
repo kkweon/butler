@@ -20,6 +20,8 @@ function createMockTab(
     selected: false,
     discarded: false,
     autoDiscardable: true,
+    frozen: false,
+    lastAccessed: 0,
     url: 'https://example.com/page',
     title: 'Mock Tab',
     ...overrides,
