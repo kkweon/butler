@@ -69,7 +69,7 @@ describe('BrowserActionsService', () => {
       const actions = service.getBaseBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(12)
+      expect(actions.length).toBe(13)
       expect(actions.map((a) => a.name)).toEqual([
         'Close other tabs',
         'Close tabs to the right',
@@ -83,6 +83,7 @@ describe('BrowserActionsService', () => {
         'Close duplicate tabs',
         'Move current tab to first',
         'Move current tab to last',
+        'Move current tab to another window',
       ])
     })
 
@@ -106,7 +107,7 @@ describe('BrowserActionsService', () => {
       const actions = await service.getBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(13) // 12 base + 1 pin action
+      expect(actions.length).toBe(14) // 13 base + 1 pin action
       expect(actions[0].name).toBe('Pin the current tab')
     })
 
@@ -131,7 +132,7 @@ describe('BrowserActionsService', () => {
       const actions = await service.getBrowserActions()
 
       expect(actions).toBeDefined()
-      expect(actions.length).toBe(12) // Only base actions
+      expect(actions.length).toBe(13) // Only base actions
     })
 
     it('should label the selection-aware actions with the selected tab count', async () => {
@@ -160,6 +161,7 @@ describe('BrowserActionsService', () => {
         'Close duplicate tabs',
         'Move 3 tabs to first',
         'Move 3 tabs to last',
+        'Move 3 tabs to another window',
       ])
     })
 

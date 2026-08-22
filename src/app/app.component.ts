@@ -23,12 +23,29 @@ import { ChromeService } from './chrome.service'
 import Fuse from 'fuse.js'
 import { ChromeSharedOptionsService } from './chrome-shared-options.service'
 import { BrowserActionsService } from './browser-actions.service'
-import { BrowserAction, SearchResult, CombinedResults } from './models'
-import { filterUniqueValues, isBrowserAction } from './utils'
+import {
+  BrowserAction,
+  SearchResult,
+  CombinedResults,
+  MoveTarget,
+  PaletteMode,
+} from './models'
+import { filterUniqueValues, hostnameOf, isBrowserAction } from './utils'
 import { createFuseInstance } from './fuse-utils'
 import Tab = chrome.tabs.Tab
 import HistoryItem = chrome.history.HistoryItem
 import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
+
+/** The synthetic "pop these tabs out on their own" destination. */
+const NEW_WINDOW_TARGET: MoveTarget = {
+  kind: 'new-window',
+  windowId: null,
+  label: 'New window',
+  subtitle: 'Pop out on its own',
+  faviconUrl: '',
+  tabTitles: [],
+  tabUrls: [],
+}
 
 @Component({
   selector: 'app-root',
@@ -61,6 +78,20 @@ export class AppComponent implements OnInit {
   private selectedIndexSubject = new BehaviorSubject<number>(0)
   selectedIndex$ = this.selectedIndexSubject.asObservable()
 
+  // --- "Move tabs to another window" sub-panel ---------------------------
+  // These are field initializers rather than being built in `ngOnInit`,
+  // because the sub-panel state has to survive a second `ngOnInit` call.
+  moveSearchInput: UntypedFormControl = new UntypedFormControl('')
+  private paletteModeSubject = new BehaviorSubject<PaletteMode>({
+    kind: 'search',
+  })
+  paletteMode$ = this.paletteModeSubject.asObservable()
+  private moveSelectedIndexSubject = new BehaviorSubject<number>(0)
+  moveSelectedIndex$ = this.moveSelectedIndexSubject.asObservable()
+  private latestMoveTargets: MoveTarget[] | null = null
+  moveTargets$: Observable<MoveTarget[]>
+  moveError: string | null = null
+
   constructor(
     private chromeService: ChromeService,
     private chromeSharedOptionsService: ChromeSharedOptionsService,
@@ -73,6 +104,41 @@ export class AppComponent implements OnInit {
 
   set selectedIndex(value: number) {
     this.selectedIndexSubject.next(value)
+  }
+
+  get paletteMode(): PaletteMode {
+    return this.paletteModeSubject.value
+  }
+
+  get isMoveMode(): boolean {
+    return this.paletteMode.kind === 'move'
+  }
+
+  get movingTabs(): Tab[] | null {
+    const mode = this.paletteMode
+    return mode.kind === 'move' ? mode.tabs : null
+  }
+
+  /**
+   * The single search box is bound to whichever control the current stage owns.
+   * Swapping the control (rather than rewriting one control's value) means the
+   * search streams stay idle while the sub-panel is open, so leaving it restores
+   * the previous query and selection for free.
+   */
+  get activeSearchControl(): UntypedFormControl {
+    return this.isMoveMode ? this.moveSearchInput : this.searchInput
+  }
+
+  get moveTargets(): MoveTarget[] {
+    return this.latestMoveTargets ?? []
+  }
+
+  get moveSelectedIndex(): number {
+    return this.moveSelectedIndexSubject.value
+  }
+
+  set moveSelectedIndex(value: number) {
+    this.moveSelectedIndexSubject.next(value)
   }
 
   ngOnInit(): void {
@@ -133,6 +199,43 @@ export class AppComponent implements OnInit {
     )
 
     this.hasAnyResults$ = this.totalResults$.pipe(map((total) => total > 0))
+
+    // Windows are fetched once per entry into the sub-panel and then filtered
+    // in memory, so typing never costs a round trip to Chrome.
+    const moveCandidates$ = this.paletteMode$.pipe(
+      switchMap((mode) =>
+        mode.kind === 'move'
+          ? from(this.buildMoveTargets(mode.tabs)).pipe(
+              catchError((error) => {
+                console.error('Failed to load windows to move tabs to:', error)
+                return of([] as MoveTarget[])
+              }),
+            )
+          : of([] as MoveTarget[]),
+      ),
+      shareReplay(1),
+    )
+
+    this.moveTargets$ = combineLatest([
+      moveCandidates$,
+      this.moveSearchInput.valueChanges.pipe(startWith('')),
+    ]).pipe(
+      map(([candidates, query]) =>
+        this.filterMoveTargets(candidates, query ?? ''),
+      ),
+      tap((targets) => {
+        this.latestMoveTargets = targets
+        // Mirrors the search-mode reset above.
+        this.moveSelectedIndex = 0
+      }),
+      shareReplay(1),
+    )
+
+    // The keyboard handler reads `latestMoveTargets`, so it must not depend on
+    // the template happening to subscribe. `shareReplay` keeps this and the
+    // async pipe on a single source subscription. Nothing unsubscribes: the
+    // popup document is torn down wholesale when it closes.
+    this.moveTargets$.subscribe()
   }
 
   private _initializeActionsStream(): Observable<BrowserAction[]> {
@@ -291,6 +394,99 @@ export class AppComponent implements OnInit {
     )
   }
 
+  /**
+   * Builds the destination list for the move sub-panel.
+   *
+   * `getHighlightedTabs` queries the current window, so every source tab shares
+   * one `windowId` and one `incognito` value and eligibility is a single check.
+   */
+  private async buildMoveTargets(sourceTabs: Tab[]): Promise<MoveTarget[]> {
+    if (0 === sourceTabs.length) {
+      return []
+    }
+
+    const [sourceTab] = sourceTabs
+    const windows = await this.chromeService.getAllWindowsWithTabs()
+    const sourceWindow = windows.find((win) => win.id === sourceTab.windowId)
+    const sourceTabCount = sourceWindow?.tabs?.length ?? 0
+
+    const windowTargets = windows
+      .filter((win) => win.id !== undefined)
+      .filter((win) => win.id !== sourceTab.windowId)
+      .filter((win) => (win.type ?? 'normal') === 'normal')
+      // Chrome refuses to move tabs between normal and incognito windows, so
+      // these are filtered out rather than offered and then failing.
+      .filter((win) => win.incognito === sourceTab.incognito)
+      .map((win) => this.toMoveTarget(win))
+
+    // Moving every tab out of a window closes it and recreates the same set
+    // elsewhere, so the new-window entry would be a no-op with worse placement.
+    return sourceTabs.length < sourceTabCount
+      ? [NEW_WINDOW_TARGET, ...windowTargets]
+      : windowTargets
+  }
+
+  private toMoveTarget(win: chrome.windows.Window): MoveTarget {
+    const tabs = win.tabs ?? []
+    const activeTab = tabs.find((tab) => tab.active) ?? tabs[0]
+    const label =
+      activeTab?.title?.trim() ||
+      hostnameOf(activeTab?.url) ||
+      'Untitled window'
+    const countLabel = `${tabs.length} ${tabs.length === 1 ? 'tab' : 'tabs'}`
+    // A preview of the other tabs is what actually tells two windows apart when
+    // both happen to be showing the same site.
+    const otherTitles = tabs
+      .filter((tab) => tab !== activeTab)
+      .map((tab) => tab.title?.trim())
+      .filter((title): title is string => !!title)
+
+    return {
+      kind: 'window',
+      windowId: win.id,
+      label,
+      subtitle: otherTitles.length
+        ? `${countLabel} · ${otherTitles.slice(0, 3).join(', ')}`
+        : countLabel,
+      faviconUrl: activeTab?.favIconUrl ?? '',
+      tabTitles: tabs.map((tab) => tab.title ?? ''),
+      tabUrls: tabs.map((tab) => tab.url ?? ''),
+    }
+  }
+
+  private filterMoveTargets(
+    targets: MoveTarget[],
+    query: string,
+  ): MoveTarget[] {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      // Empty query lists every destination, like the browser actions stream.
+      return targets
+    }
+
+    // "New window" is matched literally rather than fuzzily, and always sorts
+    // first when it matches. Index 0 is the Enter target, so which entry sits
+    // there has to be predictable; a fuzzy match on a two-word constant would
+    // leave it hovering near the top for unrelated queries.
+    const newWindow = targets.filter(
+      (target) =>
+        target.kind === 'new-window' &&
+        target.label.toLowerCase().includes(trimmed.toLowerCase()),
+    )
+    const matches = createFuseInstance<MoveTarget>(
+      targets.filter((target) => target.kind === 'window'),
+      ['label', 'tabTitles', 'tabUrls'],
+    )
+      .search(trimmed)
+      .map((result) => result.item)
+
+    return [...newWindow, ...matches]
+  }
+
+  getMoveActiveDescendantId(targets: MoveTarget[]): string | null {
+    return targets.length === 0 ? null : `move-target-${this.moveSelectedIndex}`
+  }
+
   // Index calculation for result selection (now using observables)
   getActionIndex(actionIndex: number): number {
     return actionIndex
@@ -340,6 +536,13 @@ export class AppComponent implements OnInit {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
+    // The move sub-panel owns every key while it is open, including Escape,
+    // which steps back to the search results instead of closing the popup.
+    if (this.isMoveMode) {
+      this.onMoveModeKeyDown(event)
+      return
+    }
+
     // Handle Escape key unconditionally first, as it should always work.
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -425,6 +628,141 @@ export class AppComponent implements OnInit {
     this.scrollSelectedItemIntoView()
   }
 
+  private onMoveModeKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      this.exitMoveMode()
+      return
+    }
+
+    const targets = this.latestMoveTargets
+    if (!targets || targets.length === 0) {
+      return
+    }
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault()
+        this.navigateMoveTargets('down')
+        break
+      case 'Tab':
+        event.preventDefault()
+        this.navigateMoveTargets(event.shiftKey ? 'up' : 'down')
+        break
+      case 'ArrowUp':
+        event.preventDefault()
+        this.navigateMoveTargets('up')
+        break
+      case 'Enter': {
+        const target = targets[this.moveSelectedIndex]
+        if (target) {
+          event.preventDefault()
+          void this.commitMove(target)
+        }
+        break
+      }
+    }
+  }
+
+  private navigateMoveTargets(direction: 'up' | 'down'): void {
+    const total = this.latestMoveTargets?.length ?? 0
+    if (total === 0) {
+      return
+    }
+
+    if (direction === 'down') {
+      this.moveSelectedIndex = (this.moveSelectedIndex + 1) % total
+    } else {
+      this.moveSelectedIndex =
+        this.moveSelectedIndex === 0 ? total - 1 : this.moveSelectedIndex - 1
+    }
+
+    this.scrollSelectedMoveTargetIntoView()
+  }
+
+  private scrollSelectedMoveTargetIntoView(): void {
+    // Use setTimeout to ensure DOM has been updated after the index change
+    setTimeout(() => {
+      const elementId = this.getMoveActiveDescendantId(this.moveTargets)
+      if (!elementId) {
+        return
+      }
+      const element = document.getElementById(elementId)
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest',
+        })
+      }
+    }, 0)
+  }
+
+  /** Opens the destination picker for the tabs selected in Chrome. */
+  async enterMoveMode(): Promise<void> {
+    const tabs = await this.chromeService.getHighlightedTabs()
+    if (0 === tabs.length) {
+      return
+    }
+
+    this.moveError = null
+    this.moveSelectedIndex = 0
+    // `moveSearchInput` is deliberately left alone: it is already empty, and
+    // resetting it without an emission would leave a stale query cached in the
+    // `combineLatest` above.
+    this.paletteModeSubject.next({ kind: 'move', tabs })
+    this.searchInputRef?.nativeElement.focus()
+  }
+
+  /** Returns to the search results, leaving the previous query untouched. */
+  exitMoveMode(): void {
+    this.moveError = null
+    // Must emit so the cached query in `moveTargets$` is cleared too.
+    this.moveSearchInput.setValue('')
+    this.paletteModeSubject.next({ kind: 'search' })
+    this.searchInputRef?.nativeElement.focus()
+  }
+
+  async commitMove(target: MoveTarget, follow = true): Promise<void> {
+    const mode = this.paletteMode
+    if (mode.kind !== 'move') {
+      return
+    }
+    const tabs = mode.tabs
+
+    try {
+      if (target.kind === 'new-window' || target.windowId === null) {
+        // `windows.create` already focuses the window and activates the tab.
+        await this.chromeService.moveTabsToNewWindow(tabs, follow)
+      } else {
+        await this.chromeService.moveTabsToWindow(tabs, target.windowId)
+        if (follow) {
+          // Activate the tab before focusing the window: focusing another
+          // window blurs this popup and Chrome tears it down, so the focus call
+          // has to be the last thing we do. This deliberately inverts the order
+          // used by `onClickItem`.
+          await this.chromeService.activateTab(tabs[0].id)
+          await this.chromeService.activateWindow(target.windowId)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to move tabs:', error)
+      this.moveError = 'Could not move those tabs. They may have been closed.'
+      // Stay in the sub-panel so another destination can be picked.
+      return
+    }
+
+    // Note: when the source window is left empty Chrome closes it, which can
+    // tear down this popup before we get here. The move itself has already
+    // landed by then.
+    window.close()
+  }
+
+  handleMoveTargetClick(target: MoveTarget, index: number): void {
+    this.moveSelectedIndex = index
+    void this.commitMove(target)
+  }
+
   private selectCurrentResult(): void {
     const currentLatestResults = this.latestResults
     if (!currentLatestResults) {
@@ -489,6 +827,11 @@ export class AppComponent implements OnInit {
 
   async onClickItem(result: SearchResult | BrowserAction): Promise<void> {
     if (isBrowserAction(result)) {
+      if (result.panel === 'move-tabs-to-window') {
+        // Opens a sub-panel rather than acting, so the popup must stay open.
+        await this.enterMoveMode()
+        return
+      }
       await result.action()
     } else if (result.tab) {
       const currentWindow = await this.chromeService.getCurrentWindow()

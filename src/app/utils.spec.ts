@@ -1,4 +1,9 @@
-import { normalizeUrl, filterUniqueValues, isBrowserAction } from './utils'
+import {
+  normalizeUrl,
+  filterUniqueValues,
+  hostnameOf,
+  isBrowserAction,
+} from './utils'
 import { SearchResult, BrowserAction } from './models'
 
 describe('Utils', () => {
@@ -110,6 +115,31 @@ describe('Utils', () => {
       }
 
       expect(isBrowserAction(result)).toBe(false)
+    })
+  })
+
+  describe('hostnameOf', () => {
+    it('should extract the hostname from a URL', () => {
+      expect(hostnameOf('https://github.com/kkweon/butler')).toBe('github.com')
+    })
+
+    it('should keep subdomains', () => {
+      expect(hostnameOf('https://jira.example.com/browse/ABC-1')).toBe(
+        'jira.example.com',
+      )
+    })
+
+    it('should handle chrome:// URLs', () => {
+      expect(hostnameOf('chrome://extensions')).toBe('extensions')
+    })
+
+    it('should return an empty string for a missing URL', () => {
+      expect(hostnameOf(undefined)).toBe('')
+      expect(hostnameOf('')).toBe('')
+    })
+
+    it('should return an empty string for an unparseable URL', () => {
+      expect(hostnameOf('not a url')).toBe('')
     })
   })
 })

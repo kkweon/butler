@@ -3,6 +3,11 @@ import HistoryItem = chrome.history.HistoryItem
 import BookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode
 
 /**
+ * Sub-panels that a browser action can open instead of running immediately.
+ */
+export type BrowserActionPanel = 'move-tabs-to-window'
+
+/**
  * Represents a browser action that can be performed, e.g., "Open Settings".
  */
 export interface BrowserAction {
@@ -10,6 +15,38 @@ export interface BrowserAction {
   name: string
   /** The function to execute when the action is triggered. */
   action: () => Promise<void>
+  /**
+   * When set, selecting this action opens the named sub-panel instead of
+   * running `action` and closing the popup.
+   */
+  panel?: BrowserActionPanel
+}
+
+/** Which stage of the command palette is currently on screen. */
+export type PaletteMode =
+  { readonly kind: 'search' } | { readonly kind: 'move'; readonly tabs: Tab[] }
+
+/**
+ * A destination shown in the "move tabs to another window" sub-panel.
+ */
+export interface MoveTarget {
+  /** `new-window` is the synthetic first entry; `window` wraps an open window. */
+  readonly kind: 'new-window' | 'window'
+  /** The `chrome.windows.Window` id, or null for the new-window entry. */
+  readonly windowId: number | null
+  /** Primary row text: the window's active tab title, or "New window". */
+  readonly label: string
+  /** Secondary row text, e.g. "5 tabs · GitHub, Gmail, Docs". */
+  readonly subtitle: string
+  /** Favicon of the window's active tab. Empty for the new-window entry. */
+  readonly faviconUrl: string
+  /**
+   * Every tab title in the window. Kept as an array because Fuse indexes array
+   * values element-wise, so a window matches on any tab it contains.
+   */
+  readonly tabTitles: string[]
+  /** Every tab URL in the window, indexed the same way as `tabTitles`. */
+  readonly tabUrls: string[]
 }
 
 /**

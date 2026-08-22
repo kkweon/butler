@@ -37,3 +37,21 @@ export function normalizeUrl(url: string | undefined): string {
     return url
   }
 }
+
+/**
+ * Extracts the hostname from a URL, used as a display fallback when a tab has
+ * no title.
+ * @param url The URL to read
+ * @returns The hostname, or an empty string when the URL is missing or invalid
+ */
+export function hostnameOf(url: string | undefined): string {
+  if (!url) {
+    return ''
+  }
+
+  try {
+    return new URL(url).hostname
+  } catch (error) {
+    return ''
+  }
+}

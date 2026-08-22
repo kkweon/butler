@@ -187,6 +187,22 @@ export class ChromeService {
   }
 
   /**
+   * Gets the normal browser windows with their tabs populated, so callers can
+   * describe a window by what is inside it.
+   *
+   * Kept separate from `getAllWindows` because that one is called without query
+   * options and several callers depend on its bare signature.
+   */
+  getAllWindowsWithTabs(): Promise<chrome.windows.Window[]> {
+    return new Promise((resolve) => {
+      chrome.windows.getAll(
+        { populate: true, windowTypes: ['normal'] },
+        (windows) => resolve(windows),
+      )
+    })
+  }
+
+  /**
    * Moves the given tabs to consecutive positions starting at
    * `moveProperties.index`, keeping their relative order.
    */
@@ -197,6 +213,125 @@ export class ChromeService {
     return new Promise((resolve) => {
       chrome.tabs.move(tabIds, moveProperties, (tabs) => resolve(tabs))
     })
+  }
+
+  /**
+   * Reads `chrome.runtime.lastError` without assuming `chrome.runtime` exists,
+   * so partially stubbed test doubles keep working.
+   */
+  private lastErrorMessage(): string | null {
+    const lastError = chrome.runtime?.lastError
+    return lastError
+      ? (lastError.message ?? 'Unknown chrome.runtime error')
+      : null
+  }
+
+  /**
+   * Moves tabs to the end of another window.
+   *
+   * Unlike the other wrappers this one rejects on `chrome.runtime.lastError`.
+   * A silently dropped move would leave the user staring at an unchanged window
+   * with no idea why, which is far worse than a failed tab switch.
+   */
+  private moveTabsToWindowRaw(
+    tabIds: number[],
+    windowId: number,
+  ): Promise<chrome.tabs.Tab[]> {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.move(tabIds, { windowId, index: -1 }, (tabs) => {
+        const error = this.lastErrorMessage()
+        if (error) {
+          reject(new Error(error))
+          return
+        }
+        resolve(tabs)
+      })
+    })
+  }
+
+  /** Opens a new window containing only `tabId`. Rejects on `lastError`. */
+  private createWindowWithTab(
+    tabId: number,
+    focused: boolean,
+  ): Promise<chrome.windows.Window | undefined> {
+    return new Promise((resolve, reject) => {
+      // Do not pass `incognito` here: the moved tab already determines the new
+      // window's profile, and an explicit mismatch makes `create` throw.
+      chrome.windows.create({ tabId, focused }, (window) => {
+        const error = this.lastErrorMessage()
+        if (error) {
+          reject(new Error(error))
+          return
+        }
+        resolve(window)
+      })
+    })
+  }
+
+  /**
+   * `index: -1` means "end of the tab strip", which is not a legal position for
+   * a pinned tab, and Chrome has historically dropped the pinned flag on
+   * cross-window moves. Re-assert it rather than relying on either behaviour;
+   * this is a no-op when the flag survived.
+   */
+  private async restorePinnedState(
+    sourceTabs: chrome.tabs.Tab[],
+    movedTabs: chrome.tabs.Tab[],
+  ): Promise<void> {
+    const movedById = new Map(movedTabs.map((tab) => [tab.id, tab]))
+    const unpinnedIds = sourceTabs
+      .filter((tab) => tab.pinned && movedById.get(tab.id)?.pinned === false)
+      .map((tab) => tab.id)
+
+    if (0 < unpinnedIds.length) {
+      await this.setTabsPinned(unpinnedIds, true)
+    }
+  }
+
+  /** Moves tabs to the end of `windowId`, keeping order and pinned state. */
+  async moveTabsToWindow(
+    tabs: chrome.tabs.Tab[],
+    windowId: number,
+  ): Promise<void> {
+    if (0 === tabs.length) {
+      return
+    }
+
+    const moved = await this.moveTabsToWindowRaw(
+      tabs.map((tab) => tab.id),
+      windowId,
+    )
+    await this.restorePinnedState(tabs, moved ?? [])
+  }
+
+  /**
+   * Pops tabs out into a window of their own, keeping order and pinned state.
+   * @returns The new window's id, when Chrome reported one.
+   */
+  async moveTabsToNewWindow(
+    tabs: chrome.tabs.Tab[],
+    focused = true,
+  ): Promise<number | undefined> {
+    if (0 === tabs.length) {
+      return undefined
+    }
+
+    // `chrome.windows.create` accepts a single tabId, so the rest follow.
+    const [firstTab, ...restTabs] = tabs
+    const created = await this.createWindowWithTab(firstTab.id, focused)
+    const windowId = created?.id
+    let movedTabs = created?.tabs ?? []
+
+    if (0 < restTabs.length && windowId !== undefined) {
+      const moved = await this.moveTabsToWindowRaw(
+        restTabs.map((tab) => tab.id),
+        windowId,
+      )
+      movedTabs = [...movedTabs, ...(moved ?? [])]
+    }
+
+    await this.restorePinnedState(tabs, movedTabs)
+    return windowId
   }
 
   private extractDomain(url: string | undefined): string {

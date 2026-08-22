@@ -69,6 +69,9 @@ describe('AppComponent', () => {
       'moveSelectedTabsToLast',
       'toggleTabPin',
       'setTabsPinned',
+      'getAllWindowsWithTabs',
+      'moveTabsToWindow',
+      'moveTabsToNewWindow',
     ])
 
     const chromeSharedOptionsServiceSpy = jasmine.createSpyObj(
@@ -95,6 +98,9 @@ describe('AppComponent', () => {
     chromeServiceSpy.historySearch.and.returnValue(Promise.resolve([]))
     chromeServiceSpy.bookmarksSearch.and.returnValue(Promise.resolve([]))
     chromeServiceSpy.getHighlightedTabs.and.returnValue(Promise.resolve([]))
+    chromeServiceSpy.getAllWindowsWithTabs.and.returnValue(Promise.resolve([]))
+    chromeServiceSpy.moveTabsToWindow.and.returnValue(Promise.resolve())
+    chromeServiceSpy.moveTabsToNewWindow.and.returnValue(Promise.resolve(5))
 
     // Create real browser actions service instance to get actual actions
     const realBrowserActionsService = new BrowserActionsService(
@@ -699,6 +705,343 @@ describe('AppComponent', () => {
       await component.onClickItem(mockAction)
 
       expect(mockAction.action).toHaveBeenCalled()
+    })
+  })
+
+  describe('Move tabs to another window', () => {
+    const makeWindow = (over: any = {}): chrome.windows.Window =>
+      ({
+        id: 2,
+        type: 'normal',
+        incognito: false,
+        focused: false,
+        alwaysOnTop: false,
+        tabs: [],
+        ...over,
+      }) as chrome.windows.Window
+
+    const sourceTab = () =>
+      createMockTab({ id: 7, windowId: 1, title: 'Source tab' })
+
+    const sourceWindowWithTwoTabs = () =>
+      makeWindow({
+        id: 1,
+        tabs: [
+          createMockTab({ id: 7, windowId: 1 }),
+          createMockTab({ id: 8, windowId: 1 }),
+        ],
+      })
+
+    const otherWindow = () =>
+      makeWindow({
+        id: 2,
+        tabs: [
+          createMockTab({
+            id: 20,
+            windowId: 2,
+            active: true,
+            title: 'GitHub',
+            url: 'https://github.com',
+          }),
+          createMockTab({
+            id: 21,
+            windowId: 2,
+            title: 'Jira board',
+            url: 'https://jira.example.com',
+          }),
+        ],
+      })
+
+    /** Puts the component into move mode with the given destination windows. */
+    async function enterMoveMode(
+      windows: chrome.windows.Window[],
+      tabs = [sourceTab()],
+    ): Promise<void> {
+      mockChromeService.getHighlightedTabs.and.returnValue(
+        Promise.resolve(tabs),
+      )
+      mockChromeService.getAllWindowsWithTabs.and.returnValue(
+        Promise.resolve(windows),
+      )
+      await component.enterMoveMode()
+      await fixture.whenStable()
+    }
+
+    beforeEach(() => {
+      spyOn(window, 'close')
+    })
+
+    describe('entering and leaving', () => {
+      it('should open the sub-panel when the panel action is selected', async () => {
+        mockChromeService.getHighlightedTabs.and.returnValue(
+          Promise.resolve([sourceTab()]),
+        )
+        mockChromeService.getAllWindowsWithTabs.and.returnValue(
+          Promise.resolve([sourceWindowWithTwoTabs(), otherWindow()]),
+        )
+        const actions = await mockBrowserActionsService.getBrowserActions()
+        const panelAction = actions.find(
+          (action) => action.panel === 'move-tabs-to-window',
+        )
+        expect(panelAction).toBeDefined()
+
+        await component.onClickItem(panelAction)
+
+        expect(component.isMoveMode).toBe(true)
+        expect(window.close).not.toHaveBeenCalled()
+      })
+
+      it('should not enter move mode without any highlighted tab', async () => {
+        await enterMoveMode([otherWindow()], [])
+
+        expect(component.isMoveMode).toBe(false)
+      })
+
+      it('should bind the search box to the sub-panel control', async () => {
+        expect(component.activeSearchControl).toBe(component.searchInput)
+
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        expect(component.activeSearchControl).toBe(component.moveSearchInput)
+      })
+
+      it('should keep the previous query and selection when leaving', async () => {
+        component.searchInput.setValue('test')
+        spyOn(component.searchInput, 'reset')
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+        // Set the cursor once the sub-panel is up: the point of the test is
+        // that leaving it does not disturb the search state behind it.
+        component.selectedIndex = 3
+
+        component.onKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }))
+
+        expect(component.isMoveMode).toBe(false)
+        expect(component.searchInput.value).toBe('test')
+        expect(component.selectedIndex).toBe(3)
+        expect(component.searchInput.reset).not.toHaveBeenCalled()
+        expect(window.close).not.toHaveBeenCalled()
+      })
+
+      it('should clear the sub-panel query so a later visit is unfiltered', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+        component.moveSearchInput.setValue('jira')
+        await fixture.whenStable()
+
+        component.exitMoveMode()
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        expect(component.moveSearchInput.value).toBe('')
+        expect(component.moveTargets.length).toBe(2)
+      })
+    })
+
+    describe('destination list', () => {
+      it('should list New window first, then eligible windows', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        expect(component.moveTargets.map((t) => t.label)).toEqual([
+          'New window',
+          'GitHub',
+        ])
+      })
+
+      it('should exclude the source window', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        expect(
+          component.moveTargets.some((target) => target.windowId === 1),
+        ).toBe(false)
+      })
+
+      it('should exclude windows from the other incognito profile', async () => {
+        await enterMoveMode([
+          sourceWindowWithTwoTabs(),
+          makeWindow({ id: 3, incognito: true, tabs: [createMockTab()] }),
+        ])
+
+        expect(component.moveTargets.map((t) => t.windowId)).toEqual([null])
+      })
+
+      it('should hide New window when the whole source window is moving', async () => {
+        const tabs = [
+          createMockTab({ id: 7, windowId: 1 }),
+          createMockTab({ id: 8, windowId: 1 }),
+        ]
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()], tabs)
+
+        expect(component.moveTargets.map((t) => t.label)).toEqual(['GitHub'])
+      })
+
+      it('should summarise a window by its tab count and other titles', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        const target = component.moveTargets.find((t) => t.windowId === 2)
+        expect(target.subtitle).toBe('2 tabs \u00b7 Jira board')
+      })
+
+      it('should match a window by a non-active tab title', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        component.moveSearchInput.setValue('jira')
+        await fixture.whenStable()
+
+        expect(component.moveTargets.map((t) => t.windowId)).toEqual([2])
+      })
+
+      it('should keep New window for a matching query and drop it otherwise', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        component.moveSearchInput.setValue('new')
+        await fixture.whenStable()
+        expect(component.moveTargets[0].kind).toBe('new-window')
+
+        component.moveSearchInput.setValue('jira')
+        await fixture.whenStable()
+        expect(component.moveTargets.some((t) => t.kind === 'new-window')).toBe(
+          false,
+        )
+      })
+    })
+
+    describe('keyboard navigation', () => {
+      it('should wrap without disturbing the search selection', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+        component.selectedIndex = 3
+
+        component.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown' }))
+        expect(component.moveSelectedIndex).toBe(1)
+
+        component.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown' }))
+        expect(component.moveSelectedIndex).toBe(0)
+
+        component.onKeyDown(new KeyboardEvent('keydown', { key: 'ArrowUp' }))
+        expect(component.moveSelectedIndex).toBe(1)
+
+        expect(component.selectedIndex).toBe(3)
+      })
+
+      it('should navigate with Tab and Shift+Tab', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        component.onKeyDown(new KeyboardEvent('keydown', { key: 'Tab' }))
+        expect(component.moveSelectedIndex).toBe(1)
+
+        component.onKeyDown(
+          new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true }),
+        )
+        expect(component.moveSelectedIndex).toBe(0)
+      })
+
+      it('should reset the cursor when the query changes', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+        component.moveSelectedIndex = 1
+
+        component.moveSearchInput.setValue('git')
+        await fixture.whenStable()
+
+        expect(component.moveSelectedIndex).toBe(0)
+      })
+
+      it('should expose the active descendant id', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+        component.moveSelectedIndex = 1
+
+        expect(component.getMoveActiveDescendantId(component.moveTargets)).toBe(
+          'move-target-1',
+        )
+        expect(component.getMoveActiveDescendantId([])).toBeNull()
+      })
+    })
+
+    describe('committing the move', () => {
+      it('should pop the tabs out into a new window', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        component.onKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }))
+        await fixture.whenStable()
+
+        expect(mockChromeService.moveTabsToNewWindow).toHaveBeenCalledWith(
+          [jasmine.objectContaining({ id: 7 })],
+          true,
+        )
+        expect(window.close).toHaveBeenCalled()
+      })
+
+      it('should activate the tab before focusing its new window', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+        const calls: string[] = []
+        mockChromeService.moveTabsToWindow.and.callFake(async () => {
+          calls.push('move')
+        })
+        mockChromeService.activateTab.and.callFake((async () => {
+          calls.push('activateTab')
+        }) as any)
+        mockChromeService.activateWindow.and.callFake((async () => {
+          calls.push('activateWindow')
+        }) as any)
+
+        await component.commitMove(
+          component.moveTargets.find((t) => t.windowId === 2),
+        )
+
+        // Focusing another window tears down the popup, so it has to be last.
+        expect(calls).toEqual(['move', 'activateTab', 'activateWindow'])
+        expect(window.close).toHaveBeenCalled()
+      })
+
+      it('should skip the follow-up when asked not to follow', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+
+        await component.commitMove(
+          component.moveTargets.find((t) => t.windowId === 2),
+          false,
+        )
+
+        expect(mockChromeService.activateTab).not.toHaveBeenCalled()
+        expect(mockChromeService.activateWindow).not.toHaveBeenCalled()
+        expect(window.close).toHaveBeenCalled()
+      })
+
+      it('should stay open and report when the move fails', async () => {
+        spyOn(console, 'error')
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+        mockChromeService.moveTabsToWindow.and.returnValue(
+          Promise.reject(new Error('boom')),
+        )
+
+        await component.commitMove(
+          component.moveTargets.find((t) => t.windowId === 2),
+        )
+
+        expect(window.close).not.toHaveBeenCalled()
+        expect(component.isMoveMode).toBe(true)
+        expect(component.moveError).toBeTruthy()
+      })
+
+      it('should commit from a click', async () => {
+        await enterMoveMode([sourceWindowWithTwoTabs(), otherWindow()])
+        const target = component.moveTargets.find((t) => t.windowId === 2)
+
+        component.handleMoveTargetClick(target, 1)
+        await fixture.whenStable()
+
+        expect(component.moveSelectedIndex).toBe(1)
+        expect(mockChromeService.moveTabsToWindow).toHaveBeenCalledWith(
+          [jasmine.objectContaining({ id: 7 })],
+          2,
+        )
+      })
+
+      it('should do nothing on Enter with no destinations', async () => {
+        await enterMoveMode([makeWindow({ id: 1, tabs: [sourceTab()] })])
+
+        expect(component.moveTargets.length).toBe(0)
+        component.onKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }))
+        await fixture.whenStable()
+
+        expect(mockChromeService.moveTabsToNewWindow).not.toHaveBeenCalled()
+        expect(window.close).not.toHaveBeenCalled()
+      })
     })
   })
 })

@@ -884,4 +884,218 @@ describe('ChromeService', () => {
       })
     })
   })
+
+  describe('moving tabs between windows', () => {
+    let mockChrome: any
+
+    const makeTab = (over: any = {}): any => ({
+      id: 1,
+      windowId: 1,
+      index: 0,
+      pinned: false,
+      active: false,
+      highlighted: false,
+      incognito: false,
+      title: 'Tab',
+      url: 'https://example.com',
+      ...over,
+    })
+
+    beforeEach(() => {
+      mockChrome = {
+        runtime: {},
+        windows: {
+          getAll: jasmine.createSpy('getAll'),
+          create: jasmine.createSpy('create'),
+        },
+        tabs: {
+          query: jasmine.createSpy('query'),
+          move: jasmine.createSpy('move'),
+          update: jasmine.createSpy('update'),
+        },
+      }
+      ;(window as any).chrome = mockChrome
+    })
+
+    afterEach(() => {
+      // lastError leaks into unrelated suites otherwise.
+      mockChrome.runtime.lastError = undefined
+    })
+
+    describe('getAllWindowsWithTabs', () => {
+      it('should request normal windows with their tabs populated', async () => {
+        const mockWindows = [{ id: 1, type: 'normal', tabs: [] }]
+        mockChrome.windows.getAll.and.callFake((options: any, callback: any) =>
+          callback(mockWindows),
+        )
+
+        const result = await service.getAllWindowsWithTabs()
+
+        expect(mockChrome.windows.getAll).toHaveBeenCalledWith(
+          { populate: true, windowTypes: ['normal'] },
+          jasmine.any(Function),
+        )
+        expect(result).toEqual(mockWindows as any)
+      })
+    })
+
+    describe('moveTabsToWindow', () => {
+      it('should move every tab to the end of the target window', async () => {
+        const tabs = [makeTab({ id: 7 }), makeTab({ id: 8 })]
+        mockChrome.tabs.move.and.callFake(
+          (ids: number[], props: any, callback: any) =>
+            callback(
+              ids.map((id) => makeTab({ id, windowId: props.windowId })),
+            ),
+        )
+
+        await service.moveTabsToWindow(tabs, 2)
+
+        expect(mockChrome.tabs.move).toHaveBeenCalledWith(
+          [7, 8],
+          { windowId: 2, index: -1 },
+          jasmine.any(Function),
+        )
+      })
+
+      it('should do nothing when there are no tabs', async () => {
+        await service.moveTabsToWindow([], 2)
+
+        expect(mockChrome.tabs.move).not.toHaveBeenCalled()
+      })
+
+      it('should re-pin only the tabs that lost their pinned flag', async () => {
+        const tabs = [
+          makeTab({ id: 7, pinned: true }),
+          makeTab({ id: 8, pinned: true }),
+          makeTab({ id: 9, pinned: false }),
+        ]
+        mockChrome.tabs.move.and.callFake(
+          (ids: number[], props: any, callback: any) =>
+            callback([
+              makeTab({ id: 7, pinned: false }),
+              makeTab({ id: 8, pinned: true }),
+              makeTab({ id: 9, pinned: false }),
+            ]),
+        )
+        const setTabsPinned = spyOn(service, 'setTabsPinned').and.returnValue(
+          Promise.resolve(),
+        )
+
+        await service.moveTabsToWindow(tabs, 2)
+
+        expect(setTabsPinned).toHaveBeenCalledWith([7], true)
+      })
+
+      it('should not touch pinned state when nothing was unpinned', async () => {
+        const tabs = [makeTab({ id: 7, pinned: true })]
+        mockChrome.tabs.move.and.callFake(
+          (ids: number[], props: any, callback: any) =>
+            callback([makeTab({ id: 7, pinned: true })]),
+        )
+        const setTabsPinned = spyOn(service, 'setTabsPinned').and.returnValue(
+          Promise.resolve(),
+        )
+
+        await service.moveTabsToWindow(tabs, 2)
+
+        expect(setTabsPinned).not.toHaveBeenCalled()
+      })
+
+      it('should reject when chrome reports a lastError', async () => {
+        mockChrome.tabs.move.and.callFake(
+          (ids: number[], props: any, callback: any) => {
+            mockChrome.runtime.lastError = { message: 'boom' }
+            callback(undefined)
+          },
+        )
+
+        await expectAsync(
+          service.moveTabsToWindow([makeTab({ id: 7 })], 2),
+        ).toBeRejectedWithError('boom')
+      })
+    })
+
+    describe('moveTabsToNewWindow', () => {
+      it('should create a window from the first tab and move the rest in', async () => {
+        const tabs = [makeTab({ id: 7 }), makeTab({ id: 8 })]
+        mockChrome.windows.create.and.callFake((props: any, callback: any) =>
+          callback({ id: 5, tabs: [makeTab({ id: 7, windowId: 5 })] }),
+        )
+        mockChrome.tabs.move.and.callFake(
+          (ids: number[], props: any, callback: any) =>
+            callback(
+              ids.map((id) => makeTab({ id, windowId: props.windowId })),
+            ),
+        )
+
+        const windowId = await service.moveTabsToNewWindow(tabs)
+
+        expect(mockChrome.windows.create).toHaveBeenCalledWith(
+          { tabId: 7, focused: true },
+          jasmine.any(Function),
+        )
+        expect(mockChrome.tabs.move).toHaveBeenCalledWith(
+          [8],
+          { windowId: 5, index: -1 },
+          jasmine.any(Function),
+        )
+        expect(windowId).toBe(5)
+      })
+
+      it('should not move anything else for a single tab', async () => {
+        mockChrome.windows.create.and.callFake((props: any, callback: any) =>
+          callback({ id: 5, tabs: [makeTab({ id: 7, windowId: 5 })] }),
+        )
+
+        await service.moveTabsToNewWindow([makeTab({ id: 7 })])
+
+        expect(mockChrome.tabs.move).not.toHaveBeenCalled()
+      })
+
+      it('should honour the focused flag', async () => {
+        mockChrome.windows.create.and.callFake((props: any, callback: any) =>
+          callback({ id: 5, tabs: [] }),
+        )
+
+        await service.moveTabsToNewWindow([makeTab({ id: 7 })], false)
+
+        expect(mockChrome.windows.create).toHaveBeenCalledWith(
+          { tabId: 7, focused: false },
+          jasmine.any(Function),
+        )
+      })
+
+      it('should re-pin a tab that came back unpinned', async () => {
+        mockChrome.windows.create.and.callFake((props: any, callback: any) =>
+          callback({ id: 5, tabs: [makeTab({ id: 7, pinned: false })] }),
+        )
+        const setTabsPinned = spyOn(service, 'setTabsPinned').and.returnValue(
+          Promise.resolve(),
+        )
+
+        await service.moveTabsToNewWindow([makeTab({ id: 7, pinned: true })])
+
+        expect(setTabsPinned).toHaveBeenCalledWith([7], true)
+      })
+
+      it('should return undefined for an empty selection', async () => {
+        const windowId = await service.moveTabsToNewWindow([])
+
+        expect(windowId).toBeUndefined()
+        expect(mockChrome.windows.create).not.toHaveBeenCalled()
+      })
+
+      it('should reject when chrome reports a lastError', async () => {
+        mockChrome.windows.create.and.callFake((props: any, callback: any) => {
+          mockChrome.runtime.lastError = { message: 'nope' }
+          callback(undefined)
+        })
+
+        await expectAsync(
+          service.moveTabsToNewWindow([makeTab({ id: 7 })]),
+        ).toBeRejectedWithError('nope')
+      })
+    })
+  })
 })

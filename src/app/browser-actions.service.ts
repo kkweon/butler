@@ -114,6 +114,15 @@ export class BrowserActionsService {
           await this.chromeService.moveSelectedTabsToLast()
         },
       },
+      {
+        name: hasMultiSelection
+          ? `Move ${selectedTabsCount} tabs to another window`
+          : 'Move current tab to another window',
+        panel: 'move-tabs-to-window',
+        // `panel` short-circuits in AppComponent.onClickItem, which opens the
+        // destination picker instead. This is never invoked.
+        action: async () => {},
+      },
     ]
   }
 

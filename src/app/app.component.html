@@ -3,23 +3,89 @@
     <input
       class="search-input"
       type="text"
-      placeholder="Search anything..."
-      [formControl]="searchInput"
+      [placeholder]="isMoveMode ? 'Search windows...' : 'Search anything...'"
+      [formControl]="activeSearchControl"
       autofocus
       #searchInputRef
       role="combobox"
       aria-expanded="true"
       aria-autocomplete="list"
       [attr.aria-activedescendant]="
-        (allResults$ | async)
-          ? getActiveDescendantId(allResults$ | async)
-          : null
+        isMoveMode
+          ? getMoveActiveDescendantId(moveTargets)
+          : (allResults$ | async)
+            ? getActiveDescendantId(allResults$ | async)
+            : null
       "
-      aria-label="Search tabs, bookmarks, history, and actions"
+      [attr.aria-label]="
+        isMoveMode
+          ? 'Search windows to move tabs to'
+          : 'Search tabs, bookmarks, history, and actions'
+      "
     />
   </div>
 
-  @if (searchInput.value?.length > 0) {
+  @if (isMoveMode) {
+    <!-- The header and the error sit outside the listbox: its children have to
+         be options, and role="alert" is not valid inside one. -->
+    <div class="move-header" role="status" aria-live="polite">
+      <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+      <span class="move-header-text">
+        @if (movingTabs?.length === 1) {
+          Move &ldquo;{{ movingTabs[0].title }}&rdquo; to&hellip;
+        } @else {
+          Move {{ movingTabs?.length }} tabs to&hellip;
+        }
+      </span>
+      <span class="move-header-hint">Esc to go back</span>
+    </div>
+    @if (moveError) {
+      <div class="move-error" role="alert">{{ moveError }}</div>
+    }
+    <div
+      class="results-container"
+      role="listbox"
+      aria-label="Move destinations"
+    >
+      @if (moveTargets$ | async; as targets) {
+        @if (targets.length === 0) {
+          <div class="empty-state">No other window to move these tabs to.</div>
+        }
+        @for (
+          target of targets;
+          track target.windowId ?? 'new-window';
+          let i = $index
+        ) {
+          <button
+            class="result-item"
+            [class.selected]="moveSelectedIndex === i"
+            [id]="'move-target-' + i"
+            role="option"
+            [attr.aria-selected]="moveSelectedIndex === i"
+            (click)="handleMoveTargetClick(target, i)"
+          >
+            <div class="result-icon">
+              @if (target.kind === 'new-window') {
+                <mat-icon aria-hidden="true">open_in_new</mat-icon>
+              } @else if (target.faviconUrl) {
+                <img
+                  class="favicon"
+                  [src]="target.faviconUrl"
+                  [alt]="'Favicon for ' + target.label"
+                />
+              } @else {
+                <mat-icon aria-hidden="true">desktop_windows</mat-icon>
+              }
+            </div>
+            <div class="result-content">
+              <div class="result-title">{{ target.label }}</div>
+              <div class="result-subtitle">{{ target.subtitle }}</div>
+            </div>
+          </button>
+        }
+      }
+    </div>
+  } @else if (searchInput.value?.length > 0) {
     <div class="results-container" role="listbox" aria-label="Search results">
       @if (allResults$ | async; as results) {
         <!-- Browser Actions Group -->
